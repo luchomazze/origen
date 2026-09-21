@@ -1,0 +1,113 @@
+# ORIGEN - Roadmap a production ready
+
+## Decisiones
+
+- Repositorio publico previsto: `origen-real-estate`.
+- Node 22 + pnpm 10.34.3.
+- Supabase como backend, autenticacion y Storage.
+- Login por email y contrasena.
+- Un administrador en el MVP.
+- Migrar 16 listings y 15 unidades demo.
+- Flujo `BORRADOR` / `PUBLICADO`.
+- Imagenes JPG, PNG o WebP de hasta 10 MB.
+- Deploy previsto en Vercel.
+- Contacto por WhatsApp e Instagram; eliminar el formulario simulado.
+
+## Sprint 0 - Repositorio y base tecnica
+
+- [x] Revisar la estructura actual y detectar que no habia repositorio Git local.
+- [x] Definir nombre de repositorio: `origen-real-estate`.
+- [ ] Crear el repositorio publico remoto y configurar el push inicial.
+- [ ] Revisar el historial local antes del primer push para descartar secretos.
+- [x] Crear `.env.example` sin credenciales.
+- [x] Ajustar `.gitignore` para excluir `.env`, `.supabase`, dumps, logs, `node_modules` y `dist`.
+- [x] Documentar Node, pnpm, instalacion, comandos y variables en `README.md`.
+- [x] Agregar `pnpm typecheck`.
+- [x] Declarar `@supabase/supabase-js`.
+- [x] Crear `src/lib/supabase.ts` como unico punto de acceso futuro al cliente.
+- [x] Ejecutar `pnpm.cmd install` para actualizar `pnpm-lock.yaml`.
+- [x] Ejecutar `pnpm.cmd typecheck` y `pnpm.cmd build` en el entorno local.
+
+## Sprint 1 - Eliminar contacto falso
+
+- [x] Eliminar formulario, estado y submit simulado de `src/pages/Contact.tsx`.
+- [x] Conservar WhatsApp e Instagram.
+- [x] Revisar enlaces de Header y Footer.
+- [x] Eliminar imports y estilos sin uso.
+- [x] Verificar que no se afirme que se envio o guardo un mensaje.
+
+## Sprint 2 - Modelo Supabase y migracion
+
+- [x] Crear migraciones para `listings`, `listing_units`, `listing_images`, `site_settings` y perfiles.
+- [x] Definir checks, claves, indices y slug unico.
+- [x] Definir relacion uno-a-muchos entre listings y unidades.
+- [x] Mantener `services` como `text[]` en el MVP.
+- [x] Crear seed reproducible con 16 listings, 15 unidades y 31 imagenes demo.
+- [x] Mantener mocks durante la transicion y retirarlos al validar Supabase.
+
+> La migracion y el seed estan en `supabase/`, pero aun no se ejecutaron contra un proyecto porque Supabase CLI y las credenciales del proyecto todavia no existen.
+
+## Sprint 3 - Auth y seguridad
+
+- [ ] Configurar Supabase Auth con email y contrasena en el proyecto remoto.
+- [ ] Crear el administrador inicial mediante alta controlada e insertar su perfil `admin`.
+- [x] Crear AuthProvider/hook para sesion, carga, expiracion y logout.
+- [x] Proteger el acceso a Admin.
+- [x] Crear migracion RLS para lectura publica de publicaciones visibles.
+- [x] Restringir escrituras al administrador autenticado mediante `profiles.role`.
+- [x] Proteger Storage con politicas equivalentes y bucket `listing-images`.
+- [x] No exponer service role key en el cliente.
+- [ ] Aplicar la migracion RLS contra Supabase y probar anonimo/admin con sesiones reales.
+- [ ] Agregar recuperacion de contrasena y definir la politica de invitacion del administrador.
+
+## Sprint 4 - Datos publicos reales
+
+- [ ] Reemplazar arrays demo por repositorios Supabase.
+- [ ] Agregar estados loading, error, vacio y no encontrado.
+- [ ] Adaptar filtros a datos remotos.
+- [ ] Agregar rutas reales con slug y deep links.
+- [ ] Unificar `Detail.tsx` y `ProjectDetail.tsx`.
+
+## Sprint 5 - Storage e imagenes
+
+- [ ] Crear bucket y definir estrategia de URLs publicas o firmadas.
+- [ ] Validar JPG/PNG/WebP y limite de 10 MB.
+- [ ] Implementar portada, orden, preview, reemplazo y eliminacion.
+- [ ] Persistir metadatos en `listing_images`.
+- [ ] Reemplazar imagenes Unsplash por contenido real o placeholders explicitos.
+- [ ] Limpiar archivos huerfanos.
+
+## Sprint 6 - Admin MVP
+
+- [ ] Reemplazar Admin demo por shell autenticada.
+- [ ] Mostrar metricas reales desde Supabase.
+- [ ] Crear listado con busqueda, filtros y acciones.
+- [ ] Crear alta/edicion de publicaciones.
+- [ ] Crear editor de unidades y tipologias.
+- [ ] Integrar editor de imagenes.
+- [ ] Validar slug, campos requeridos, precios y estados.
+- [ ] Implementar guardar borrador, preview y publicar.
+- [ ] Migrar WhatsApp de `localStorage` a `site_settings`.
+- [ ] Eliminar fallbacks hardcodeados y agregar logout.
+
+## Sprint 7 - Calidad y produccion
+
+- [ ] Tests unitarios de reglas de negocio y WhatsApp.
+- [ ] Tests de login, CRUD, Storage y RLS.
+- [ ] Configurar lint, typecheck, test y build en GitHub Actions.
+- [ ] Configurar Vercel y variables por ambiente.
+- [ ] Revisar SEO, sitemap y metadata.
+- [ ] Revisar accesibilidad y responsive.
+- [ ] Optimizar imagenes, carga, cache y paginacion.
+- [ ] Auditar secretos, URLs hardcodeadas y contenido demo.
+- [ ] Documentar operacion, migraciones y rollback.
+- [ ] Ejecutar smoke test desktop/mobile en preview.
+
+## Fuera del MVP
+
+- Roles multiples.
+- CRM de leads.
+- Pagos o reservas.
+- Favoritos.
+- Integracion automatica con Zonaprop.
+- Edicion colaborativa en tiempo real.
