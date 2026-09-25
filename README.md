@@ -1,6 +1,6 @@
 # ORIGEN Real Estate
 
-Frontend de ORIGEN Inversiones Inmobiliarias, construido con React, TypeScript, Vite y Tailwind CSS. El proyecto parte de una maqueta de Figma Make y se prepara para usar Supabase como backend, autenticacion y almacenamiento de imagenes.
+Frontend de ORIGEN Inversiones Inmobiliarias, construido con React, TypeScript, Vite y Tailwind CSS. Usa Supabase como backend, autenticacion y almacenamiento de imagenes.
 
 ## Requisitos
 
@@ -16,7 +16,7 @@ pnpm install
 pnpm dev
 ```
 
-La aplicacion usa el puerto configurado por Vite/Figma Make, normalmente `8443`.
+La aplicacion usa el puerto `8443` (configurable con la variable `PORT`).
 
 ## Variables de entorno
 
@@ -33,7 +33,7 @@ Variables esperadas:
 
 La anon key puede estar disponible en el frontend porque Supabase la protege mediante RLS. Una `service_role` key, credenciales administrativas o secretos nunca deben agregarse al frontend, al repositorio ni a variables `VITE_*`.
 
-El proyecto Supabase aun no esta creado; hasta entonces la maqueta sigue usando sus datos demo locales.
+El proyecto Supabase ya esta configurado en el entorno local y el sitio publico consulta sus datos reales. Las credenciales viven solamente en `.env`, que no se versiona.
 
 ## Base de datos
 
@@ -42,11 +42,15 @@ El esquema inicial y el seed reproducible estan preparados en:
 - `supabase/migrations/20260921000000_initial_schema.sql`
 - `supabase/seed.sql`
 
-La migracion crea `listings`, `listing_units`, `listing_images`, `site_settings` y `profiles`, con constraints, indices, relaciones y RLS habilitado. Las politicas de acceso se implementaran junto con Auth en el siguiente sprint.
+El repositorio contiene SQL de referencia y seed para las tablas reales `listings`, `listing_typologies`, `listing_images`, `site_settings` y `profiles`. Las migraciones iniciales fueron creadas antes de conocer el esquema remoto y deben alinearse antes de usarse para provisionar un proyecto nuevo.
 
-El seed contiene los 16 listings, 15 unidades y las imagenes demo actuales. No debe ejecutarse en produccion hasta revisar y reemplazar esos datos de demostracion.
+El seed contiene 16 listings, 15 tipologias, 16 imagenes de portada y configuracion inicial de WhatsApp. El frontend ya no usa el dataset mock local; el seed se conserva como carga inicial reproducible.
 
-La autenticacion y las politicas RLS estan preparadas en `src/auth/`, `src/pages/AdminLogin.tsx` y `supabase/migrations/20260921001000_rls_policies.sql`. Hasta crear el proyecto remoto y configurar `.env`, el login muestra que Supabase esta pendiente y el dashboard no se expone.
+La autenticacion y las politicas RLS estan implementadas en `src/auth/`, `src/pages/AdminLogin.tsx` y las migraciones de `supabase/`. El login, perfil admin, rechazo de usuario no autorizado y logout fueron probados; el sitio publico ya muestra listings reales.
+
+Para permitir que la API REST de Supabase consulte las tablas con los roles `anon` y `authenticated`, ejecuta tambien `supabase/migrations/20260921002000_api_grants.sql` en el SQL Editor. RLS y los grants son controles complementarios: ambos deben estar configurados.
+
+Si el proyecto remoto ya existia antes de integrar la carga de imagenes, ejecuta tambien `supabase/migrations/20260921004000_create_listing_images_bucket.sql` y `supabase/migrations/20260921005000_listing_images_storage_policies.sql` en el SQL Editor. Crean el bucket publico `listing-images` y aplican las politicas RLS que permiten cargar, actualizar y eliminar archivos solo al administrador.
 
 ## Comandos
 

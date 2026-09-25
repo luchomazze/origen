@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import Logo from './Logo'
 import type { Page } from '../types'
+import { TEXTS } from '../content/texts'
 
 interface Props {
   page: Page
@@ -8,12 +9,12 @@ interface Props {
 }
 
 const navItems: { label: string; page: Page }[] = [
-  { label: 'Inicio', page: 'home' },
-  { label: 'Propiedades', page: 'properties' },
-  { label: 'Terrenos', page: 'lands' },
-  { label: 'Emprendimientos', page: 'projects' },
-  { label: 'Nosotros', page: 'contact' },
-  { label: 'Contacto', page: 'contact' },
+  { label: TEXTS.nav.home, page: 'home' },
+  { label: TEXTS.nav.properties, page: 'properties' },
+  { label: TEXTS.nav.lands, page: 'lands' },
+  { label: TEXTS.nav.projects, page: 'projects' },
+  { label: TEXTS.nav.about, page: 'contact' },
+  { label: TEXTS.nav.contact, page: 'contact' },
 ]
 
 export default function Header({ page, navigate }: Props) {
@@ -95,7 +96,7 @@ export default function Header({ page, navigate }: Props) {
                 el.style.color = '#B88E3A'
               }}
             >
-              Hablar con Origen
+              {TEXTS.common.talkToOrigen}
             </button>
           </nav>
 
@@ -104,7 +105,7 @@ export default function Header({ page, navigate }: Props) {
             onClick={() => setMenuOpen(!menuOpen)}
             className="lg:hidden p-2"
             style={{ color: '#F5F2EC' }}
-            aria-label="Menú"
+            aria-label={TEXTS.nav.mobileMenuLabel}
           >
             <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.5">
               {menuOpen ? (
@@ -159,7 +160,7 @@ export default function Header({ page, navigate }: Props) {
                     backgroundColor: 'transparent',
                   }}
                 >
-                  Hablar con Origen
+                  {TEXTS.common.talkToOrigen}
                 </button>
               </div>
             </div>

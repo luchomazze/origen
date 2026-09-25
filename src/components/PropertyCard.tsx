@@ -3,10 +3,12 @@ import type { WAConfig } from '../utils/whatsapp'
 import type { Listing } from '../data/listings'
 import { displayPrecio } from '../data/listings'
 import type { Page } from '../types'
+import { TEXTS } from '../content/texts'
+import ListingImageSlider from './ListingImageSlider'
 
 interface Props {
   listing: Listing
-  waConfig?: WAConfig
+  waConfig: WAConfig
   navigate?: (to: Page, slug?: string) => void
 }
 
@@ -16,20 +18,17 @@ const WA_ICON = (
   </svg>
 )
 
-const estadoBadge: Record<string, { bg: string; text: string }> = {
-  RESERVADO: { bg: 'rgba(184,142,58,0.18)', text: '#B88E3A' },
-  EN_NEGOCIACION: { bg: 'rgba(92,99,107,0.18)', text: '#5C636B' },
+const estadoBadge: Record<string, { bg: string; text: string; label: string }> = {
+  RESERVADO: { bg: 'rgba(184,142,58,0.18)', text: '#B88E3A', label: TEXTS.commercialStatus.reserved },
+  EN_NEGOCIACION: { bg: 'rgba(92,99,107,0.18)', text: '#5C636B', label: TEXTS.commercialStatus.inNegotiation },
+  ALQUILADO: { bg: 'rgba(92,99,107,0.18)', text: '#5C636B', label: TEXTS.commercialStatus.rented },
+  VENDIDO: { bg: 'rgba(92,99,107,0.18)', text: '#5C636B', label: TEXTS.commercialStatus.sold },
 }
 
-const tipoLabel: Record<string, string> = {
-  CASA: 'Casa', DEPARTAMENTO: 'Departamento', PH: 'PH', LOCAL: 'Local',
-  OFICINA: 'Oficina', CAMPO: 'Campo', CABAÑA: 'Cabaña', OTRO: 'Otro',
-}
+const tipoLabel = TEXTS.propertyTypes
 
 export default function PropertyCard({ listing, waConfig, navigate }: Props) {
-  const waUrl = waConfig
-    ? buildWAUrl(waConfig, 'propertyMsg', listing.titulo)
-    : `https://wa.me/5493515000000`
+  const waUrl = buildWAUrl(waConfig, 'propertyMsg', listing.titulo)
 
   const locationLabel = [listing.barrio, listing.ciudad].filter(Boolean).join(' · ')
   const precio = displayPrecio(listing)
@@ -42,13 +41,7 @@ export default function PropertyCard({ listing, waConfig, navigate }: Props) {
       onClick={() => navigate?.('property-detail', listing.slug)}
     >
       <div className="relative overflow-hidden" style={{ height: '220px', backgroundColor: '#DCC8A3' }}>
-        {listing.imagen && (
-          <img
-            src={`${listing.imagen}&w=600&h=440&fit=crop&auto=format`}
-            alt={listing.titulo}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        )}
+        <ListingImageSlider images={listing.imagenes ?? (listing.imagen ? [listing.imagen] : [])} alt={listing.titulo} sizeParams="w=600&h=440" />
         {badge && (
           <div className="absolute top-3 left-3">
             <span style={{
@@ -56,7 +49,7 @@ export default function PropertyCard({ listing, waConfig, navigate }: Props) {
               textTransform: 'uppercase', fontWeight: 700, color: badge.text,
               backgroundColor: badge.bg, padding: '5px 10px', backdropFilter: 'blur(4px)',
             }}>
-              {listing.estado_comercial === 'EN_NEGOCIACION' ? 'En negociación' : 'Reservado'}
+              {badge.label}
             </span>
           </div>
         )}
@@ -79,22 +72,22 @@ export default function PropertyCard({ listing, waConfig, navigate }: Props) {
 
         <div className="flex items-center gap-3 flex-wrap mb-4" style={{ borderTop: '1px solid rgba(13,27,42,0.08)', paddingTop: '12px' }}>
           {listing.superficie_m2 && (
-            <span style={{ fontFamily: "'Montserrat'", fontSize: '11px', color: '#5C636B' }}>{listing.superficie_m2} m²</span>
+            <span style={{ fontFamily: "'Montserrat'", fontSize: '11px', color: '#5C636B' }}>{TEXTS.units.squareMeters(listing.superficie_m2)}</span>
           )}
           {listing.dormitorios != null && (
-            <span style={{ fontFamily: "'Montserrat'", fontSize: '11px', color: '#5C636B' }}>{listing.dormitorios} dorm.</span>
+            <span style={{ fontFamily: "'Montserrat'", fontSize: '11px', color: '#5C636B' }}>{TEXTS.units.bedroomsShort(listing.dormitorios)}</span>
           )}
           {listing.banos != null && (
-            <span style={{ fontFamily: "'Montserrat'", fontSize: '11px', color: '#5C636B' }}>{listing.banos} {listing.banos === 1 ? 'baño' : 'baños'}</span>
+            <span style={{ fontFamily: "'Montserrat'", fontSize: '11px', color: '#5C636B' }}>{TEXTS.units.bathrooms(listing.banos)}</span>
           )}
           {listing.cocheras != null && (
-            <span style={{ fontFamily: "'Montserrat'", fontSize: '11px', color: '#5C636B' }}>{listing.cocheras} {listing.cocheras === 1 ? 'cochera' : 'cocheras'}</span>
+            <span style={{ fontFamily: "'Montserrat'", fontSize: '11px', color: '#5C636B' }}>{TEXTS.units.garages(listing.cocheras)}</span>
           )}
         </div>
 
         <div className="flex items-center justify-between" style={{ borderTop: '1px solid rgba(13,27,42,0.08)', paddingTop: '12px' }}>
           <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 600, color: '#0D1B2A' }}>
-            {precio ?? '—'}
+            {precio ?? TEXTS.common.emptyValue}
           </div>
           <a
             href={waUrl}
@@ -112,7 +105,7 @@ export default function PropertyCard({ listing, waConfig, navigate }: Props) {
             onMouseLeave={e => { e.currentTarget.style.color = '#5C636B'; e.currentTarget.style.borderColor = 'rgba(92,99,107,0.3)' }}
           >
             {WA_ICON}
-            Consultar
+            {TEXTS.common.consult}
           </a>
         </div>
       </div>

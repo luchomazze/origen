@@ -318,7 +318,7 @@ ADMIN
 13. PROTOTIPO FUNCIONAL
 --------------------------------------------------
 
-Hacer que los botones sean prototipables/interactivos dentro de Figma.
+Hacer que los botones sean interactivos.
 
 Crear estados visuales para:
 

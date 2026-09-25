@@ -3,8 +3,11 @@ import PropertyCard from '../components/PropertyCard'
 import ProjectCard from '../components/ProjectCard'
 import type { NavProps } from '../types'
 import type { Page } from '../types'
-import { buildWAUrl } from '../utils/whatsapp'
-import { PROPIEDADES, EMPRENDIMIENTOS } from '../data/listings'
+import { buildWAContactUrl, buildWAMessageUrl } from '../utils/whatsapp'
+import { usePublicListings } from '../hooks/usePublicListings'
+import { usePageMeta } from '../hooks/usePageMeta'
+import { buildPath } from '../utils/routing'
+import { TEXTS } from '../content/texts'
 
 const IMAGES = {
   hero: 'https://images.unsplash.com/photo-1706164971302-e30c0640cc3b',
@@ -16,9 +19,6 @@ const IMAGES = {
   zona: 'https://images.unsplash.com/photo-1699375348655-c4564465969b',
   cta: 'https://images.unsplash.com/photo-1628012209120-d9db7abf7eab',
 }
-
-const featuredProjects = EMPRENDIMIENTOS.slice(0, 3)
-const featuredProperties = PROPIEDADES.slice(0, 4)
 
 function FadeSection({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -48,23 +48,23 @@ function FadeSection({ children, delay = 0 }: { children: React.ReactNode; delay
   )
 }
 
-const ZONES = ['MANANTIALES', 'BARRIO JARDÍN', 'JARDINES DEL JOCKEY', 'CAMINO SAN CARLOS']
-const VALUES = [
-  { label: 'Profesionalismo', desc: 'Asesoramiento serio y comprometido en cada etapa de tu operación.' },
-  { label: 'Transparencia', desc: 'Información clara y honesta para que tomes decisiones con confianza.' },
-  { label: 'Confianza', desc: 'Construida operación a operación, con personas que vuelven.' },
-  { label: 'Claridad', desc: 'Sin tecnicismos innecesarios. Directo al punto que importa.' },
-]
+const ZONES = TEXTS.home.focusZones
+const VALUES = TEXTS.home.values
 
 export default function Home({ navigate, waConfig }: NavProps) {
-  const heroWaUrl = buildWAUrl(waConfig, 'propertyMsg', 'Consulta general')
+  const { listings: projects } = usePublicListings('EMPRENDIMIENTO')
+  const { listings: properties } = usePublicListings('PROPIEDAD')
+  const featuredProjects = projects.slice(0, 3)
+  const featuredProperties = properties.slice(0, 4)
+  const heroWaUrl = buildWAMessageUrl(waConfig, TEXTS.common.generalInquiryMessage)
+  usePageMeta({ title: 'ORIGEN · Inversiones Inmobiliarias', description: TEXTS.home.heroSubtitle, path: buildPath('home') })
   return (
     <main>
       {/* ── HERO ─────────────────────────────────────────────────────── */}
       <section className="relative flex items-end" style={{ height: '100svh', minHeight: '600px', backgroundColor: '#0D1B2A' }}>
         <img
           src={`${IMAGES.hero}?w=1600&h=1100&fit=crop&auto=format`}
-          alt="Arquitectura residencial premium Córdoba"
+          alt={TEXTS.home.heroImageAlt}
           className="absolute inset-0 w-full h-full object-cover"
           style={{ opacity: 0.55 }}
         />
@@ -75,14 +75,14 @@ export default function Home({ navigate, waConfig }: NavProps) {
             <div className="mb-5 flex items-center gap-3">
               <div style={{ width: '32px', height: '1px', backgroundColor: '#B88E3A' }} />
               <span style={{ fontFamily: "'Montserrat'", fontSize: '9px', letterSpacing: '0.25em', textTransform: 'uppercase', color: '#B88E3A', fontWeight: 500 }}>
-                Córdoba · Zona Sur
+                {TEXTS.home.heroEyebrow}
               </span>
             </div>
             <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(32px, 5vw, 58px)', fontWeight: 600, color: '#F5F2EC', lineHeight: 1.15, marginBottom: '20px' }}>
-              Cada gran decisión inmobiliaria tiene un origen.
+              {TEXTS.home.heroTitle}
             </h1>
             <p style={{ fontFamily: "'Montserrat'", fontSize: '14px', color: 'rgba(245,242,236,0.7)', lineHeight: 1.7, marginBottom: '40px', maxWidth: '480px' }}>
-              Propiedades, terrenos y emprendimientos seleccionados en Córdoba.
+              {TEXTS.home.heroSubtitle}
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <button
@@ -96,7 +96,7 @@ export default function Home({ navigate, waConfig }: NavProps) {
                 onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#F5F2EC' }}
                 onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#F5F2EC'; e.currentTarget.style.color = '#0D1B2A' }}
               >
-                Conocé nuestros proyectos
+                {TEXTS.home.heroProjectsButton}
               </button>
               <a
                 href={heroWaUrl}
@@ -113,7 +113,7 @@ export default function Home({ navigate, waConfig }: NavProps) {
                 onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#B88E3A' }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
-                Consultar por WhatsApp
+                {TEXTS.common.consultByWhatsapp}
               </a>
             </div>
           </div>
@@ -122,7 +122,7 @@ export default function Home({ navigate, waConfig }: NavProps) {
         {/* Scroll indicator */}
         <div className="absolute bottom-8 right-8 lg:right-12 flex flex-col items-center gap-2" style={{ opacity: 0.5 }}>
           <div style={{ width: '1px', height: '40px', backgroundColor: '#F5F2EC' }} />
-          <span style={{ fontFamily: "'Montserrat'", fontSize: '8px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#F5F2EC', writingMode: 'vertical-rl' }}>scroll</span>
+          <span style={{ fontFamily: "'Montserrat'", fontSize: '8px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#F5F2EC', writingMode: 'vertical-rl' }}>{TEXTS.home.scrollHint}</span>
         </div>
       </section>
 
@@ -132,22 +132,22 @@ export default function Home({ navigate, waConfig }: NavProps) {
           <FadeSection>
             <div className="mb-14">
               <div style={{ fontFamily: "'Montserrat'", fontSize: '9px', letterSpacing: '0.25em', textTransform: 'uppercase', color: '#B88E3A', fontWeight: 500, marginBottom: '12px' }}>
-                Nuestros servicios
+                {TEXTS.home.servicesEyebrow}
               </div>
               <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(28px, 3.5vw, 42px)', fontWeight: 600, color: '#0D1B2A', marginBottom: '12px' }}>
-                ¿Qué estás buscando?
+                {TEXTS.home.servicesTitle}
               </h2>
               <p style={{ fontFamily: "'Montserrat'", fontSize: '14px', color: '#5C636B', lineHeight: 1.7, maxWidth: '480px' }}>
-                Encontrá la alternativa que mejor se adapta a tu próximo proyecto.
+                {TEXTS.home.servicesSubtitle}
               </p>
             </div>
           </FadeSection>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-px" style={{ backgroundColor: 'rgba(13,27,42,0.08)' }}>
             {[
-              { num: '01', title: 'Propiedades', desc: 'Casas, departamentos y propiedades seleccionadas para vivir o invertir.', cta: 'Ver propiedades', page: 'properties' as Page, img: IMAGES.propiedades },
-              { num: '02', title: 'Terrenos', desc: 'Lotes y terrenos con potencial para construir, invertir o desarrollar.', cta: 'Ver terrenos', page: 'lands' as Page, img: IMAGES.terrenos },
-              { num: '03', title: 'Emprendimientos', desc: 'Proyectos inmobiliarios y oportunidades de inversión desde el pozo.', cta: 'Ver emprendimientos', page: 'projects' as Page, img: IMAGES.emprendimientos },
+              { num: '01', title: TEXTS.home.serviceCards.properties.title, desc: TEXTS.home.serviceCards.properties.description, cta: TEXTS.home.serviceCards.properties.cta, page: 'properties' as Page, img: IMAGES.propiedades },
+              { num: '02', title: TEXTS.home.serviceCards.lands.title, desc: TEXTS.home.serviceCards.lands.description, cta: TEXTS.home.serviceCards.lands.cta, page: 'lands' as Page, img: IMAGES.terrenos },
+              { num: '03', title: TEXTS.home.serviceCards.projects.title, desc: TEXTS.home.serviceCards.projects.description, cta: TEXTS.home.serviceCards.projects.cta, page: 'projects' as Page, img: IMAGES.emprendimientos },
             ].map((item, i) => (
               <FadeSection key={item.num} delay={i * 120}>
                 <div
@@ -187,20 +187,21 @@ export default function Home({ navigate, waConfig }: NavProps) {
       </section>
 
       {/* ── EMPRENDIMIENTOS DESTACADOS ────────────────────────────────── */}
+      {featuredProjects.length > 0 && (
       <section style={{ backgroundColor: '#0D1B2A', paddingTop: '96px', paddingBottom: '96px' }}>
         <div className="max-w-screen-xl mx-auto px-6 lg:px-12">
           <FadeSection>
             <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between mb-14 gap-6">
               <div>
                 <div style={{ fontFamily: "'Montserrat'", fontSize: '9px', letterSpacing: '0.25em', textTransform: 'uppercase', color: '#B88E3A', fontWeight: 500, marginBottom: '12px' }}>
-                  Proyectos en desarrollo
+                  {TEXTS.home.featuredProjectsEyebrow}
                 </div>
                 <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(28px, 3.5vw, 42px)', fontWeight: 600, color: '#F5F2EC', maxWidth: '500px', lineHeight: 1.2 }}>
-                  Proyectos para mirar hacia adelante.
+                  {TEXTS.home.featuredProjectsTitle}
                 </h2>
               </div>
               <p style={{ fontFamily: "'Montserrat'", fontSize: '13px', color: 'rgba(245,242,236,0.5)', lineHeight: 1.7, maxWidth: '320px' }}>
-                Conocé nuestros emprendimientos y descubrí nuevas oportunidades para vivir o invertir.
+                {TEXTS.home.featuredProjectsSubtitle}
               </p>
             </div>
           </FadeSection>
@@ -233,26 +234,27 @@ export default function Home({ navigate, waConfig }: NavProps) {
                 onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#B88E3A'; e.currentTarget.style.color = '#0D1B2A' }}
                 onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#B88E3A' }}
               >
-                Ver todos los emprendimientos
+                {TEXTS.home.featuredProjectsButton}
               </button>
             </div>
           </FadeSection>
         </div>
       </section>
+      )}
 
       {/* ── VIVIR / INVERTIR ─────────────────────────────────────────── */}
       <section>
         <FadeSection>
           <div style={{ marginBottom: '2px', paddingTop: '96px', backgroundColor: '#F5F2EC', paddingLeft: '24px', paddingRight: '24px', maxWidth: '1280px', margin: '0 auto', paddingBottom: '40px' }}>
             <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(24px, 3vw, 38px)', fontWeight: 600, color: '#0D1B2A', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
-              Una propiedad puede ser mucho más que una propiedad.
+              {TEXTS.home.liveOrInvestTitle}
             </h2>
           </div>
         </FadeSection>
         <div className="grid grid-cols-1 lg:grid-cols-2">
           {[
-            { title: 'Para vivir', desc: 'Encontrá un lugar que acompañe la vida que querés construir.', cta: 'Encontrar mi propiedad', page: 'properties' as Page, img: IMAGES.vivir },
-            { title: 'Para invertir', desc: 'Analizá oportunidades inmobiliarias pensadas para construir patrimonio.', cta: 'Ver oportunidades', page: 'projects' as Page, img: IMAGES.invertir },
+            { title: TEXTS.home.liveCard.title, desc: TEXTS.home.liveCard.description, cta: TEXTS.home.liveCard.cta, page: 'properties' as Page, img: IMAGES.vivir },
+            { title: TEXTS.home.investCard.title, desc: TEXTS.home.investCard.description, cta: TEXTS.home.investCard.cta, page: 'projects' as Page, img: IMAGES.invertir },
           ].map(item => (
             <div
               key={item.title}
@@ -269,7 +271,7 @@ export default function Home({ navigate, waConfig }: NavProps) {
               <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(13,27,42,0.92) 0%, transparent 60%)' }} />
               <div className="relative p-10 lg:p-14">
                 <div style={{ fontFamily: "'Montserrat'", fontSize: '9px', letterSpacing: '0.25em', textTransform: 'uppercase', color: '#B88E3A', fontWeight: 500, marginBottom: '10px' }}>
-                  ORIGEN
+                  {TEXTS.brand.name}
                 </div>
                 <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '34px', fontWeight: 600, color: '#F5F2EC', marginBottom: '12px' }}>
                   {item.title}
@@ -296,13 +298,13 @@ export default function Home({ navigate, waConfig }: NavProps) {
             <FadeSection>
               <div>
                 <div style={{ fontFamily: "'Montserrat'", fontSize: '9px', letterSpacing: '0.25em', textTransform: 'uppercase', color: '#B88E3A', fontWeight: 500, marginBottom: '14px' }}>
-                  Nuestra especialidad
+                  {TEXTS.home.specialtyEyebrow}
                 </div>
                 <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(26px, 3vw, 38px)', fontWeight: 600, color: '#0D1B2A', lineHeight: 1.2, marginBottom: '20px' }}>
-                  Conocemos dónde empieza el crecimiento.
+                  {TEXTS.home.specialtyTitle}
                 </h2>
                 <p style={{ fontFamily: "'Montserrat'", fontSize: '14px', color: '#5C636B', lineHeight: 1.8, marginBottom: '36px' }}>
-                  Trabajamos principalmente en Córdoba Sur, acompañando a quienes buscan comprar, vender o invertir en una de las zonas de mayor desarrollo de la ciudad.
+                  {TEXTS.home.specialtyText}
                 </p>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -333,16 +335,16 @@ export default function Home({ navigate, waConfig }: NavProps) {
               <div className="relative overflow-hidden" style={{ height: '480px', backgroundColor: '#DCC8A3' }}>
                 <img
                   src={`${IMAGES.zona}?w=800&h=960&fit=crop&auto=format`}
-                  alt="Córdoba Sur zona residencial"
+                  alt={TEXTS.home.focusZoneImageAlt}
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(13,27,42,0.2) 0%, transparent 60%)' }} />
                 <div className="absolute bottom-6 left-6 right-6 p-4" style={{ backgroundColor: 'rgba(13,27,42,0.85)', backdropFilter: 'blur(8px)' }}>
                   <div style={{ fontFamily: "'Montserrat'", fontSize: '8px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#B88E3A', fontWeight: 500, marginBottom: '4px' }}>
-                    Zona de foco
+                    {TEXTS.home.focusZoneLabel}
                   </div>
                   <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '16px', color: '#F5F2EC', fontWeight: 600 }}>
-                    Córdoba Sur
+                    {TEXTS.home.focusZoneName}
                   </div>
                 </div>
               </div>
@@ -352,6 +354,7 @@ export default function Home({ navigate, waConfig }: NavProps) {
       </section>
 
       {/* ── PROPIEDADES SELECCIONADAS ─────────────────────────────────── */}
+      {featuredProperties.length > 0 && (
       <section style={{ backgroundColor: '#F5F2EC', paddingBottom: '96px' }}>
         <div className="max-w-screen-xl mx-auto px-6 lg:px-12">
           <div style={{ height: '1px', backgroundColor: 'rgba(13,27,42,0.08)', marginBottom: '64px' }} />
@@ -359,10 +362,10 @@ export default function Home({ navigate, waConfig }: NavProps) {
             <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between mb-12 gap-6">
               <div>
                 <div style={{ fontFamily: "'Montserrat'", fontSize: '9px', letterSpacing: '0.25em', textTransform: 'uppercase', color: '#B88E3A', fontWeight: 500, marginBottom: '12px' }}>
-                  Destacadas
+                  {TEXTS.home.featuredPropertiesEyebrow}
                 </div>
                 <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(26px, 3vw, 38px)', fontWeight: 600, color: '#0D1B2A' }}>
-                  Propiedades seleccionadas
+                  {TEXTS.home.featuredPropertiesTitle}
                 </h2>
               </div>
               <button
@@ -384,7 +387,7 @@ export default function Home({ navigate, waConfig }: NavProps) {
                 onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#0D1B2A'; e.currentTarget.style.color = '#F5F2EC' }}
                 onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#0D1B2A' }}
               >
-                Ver todas las propiedades
+                {TEXTS.home.featuredPropertiesButton}
               </button>
             </div>
           </FadeSection>
@@ -398,6 +401,7 @@ export default function Home({ navigate, waConfig }: NavProps) {
           </div>
         </div>
       </section>
+      )}
 
       {/* ── POR QUÉ ORIGEN ───────────────────────────────────────────── */}
       <section style={{ backgroundColor: '#0D1B2A', paddingTop: '96px', paddingBottom: '96px' }}>
@@ -405,27 +409,27 @@ export default function Home({ navigate, waConfig }: NavProps) {
           <FadeSection>
             <div className="mb-16 text-center">
               <div style={{ fontFamily: "'Montserrat'", fontSize: '9px', letterSpacing: '0.25em', textTransform: 'uppercase', color: '#B88E3A', fontWeight: 500, marginBottom: '14px' }}>
-                Por qué elegirnos
+                {TEXTS.home.whyUsEyebrow}
               </div>
               <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(26px, 3vw, 38px)', fontWeight: 600, color: '#F5F2EC', maxWidth: '540px', margin: '0 auto', lineHeight: 1.25 }}>
-                Decidir bien también es parte de la inversión.
+                {TEXTS.home.whyUsTitle}
               </h2>
               <p style={{ fontFamily: "'Montserrat'", fontSize: '13px', color: 'rgba(245,242,236,0.5)', lineHeight: 1.7, maxWidth: '440px', margin: '16px auto 0' }}>
-                Acompañamos cada operación con información clara, atención personalizada y una mirada orientada al largo plazo.
+                {TEXTS.home.whyUsSubtitle}
               </p>
             </div>
           </FadeSection>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px" style={{ backgroundColor: 'rgba(245,242,236,0.06)' }}>
             {VALUES.map((v, i) => (
-              <FadeSection key={v.label} delay={i * 100}>
+              <FadeSection key={v.title} delay={i * 100}>
                 <div className="p-8 lg:p-10" style={{ backgroundColor: '#0D1B2A' }}>
                   <div style={{ width: '28px', height: '1px', backgroundColor: '#B88E3A', marginBottom: '20px' }} />
                   <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 600, color: '#F5F2EC', marginBottom: '12px' }}>
-                    {v.label}
+                    {v.title}
                   </h3>
                   <p style={{ fontFamily: "'Montserrat'", fontSize: '12px', color: 'rgba(245,242,236,0.5)', lineHeight: 1.7 }}>
-                    {v.desc}
+                    {v.description}
                   </p>
                 </div>
               </FadeSection>
@@ -440,16 +444,16 @@ export default function Home({ navigate, waConfig }: NavProps) {
           <div className="max-w-3xl mx-auto text-center">
             <FadeSection>
               <div style={{ fontFamily: "'Montserrat'", fontSize: '9px', letterSpacing: '0.25em', textTransform: 'uppercase', color: '#B88E3A', fontWeight: 500, marginBottom: '14px' }}>
-                Quiénes somos
+                {TEXTS.home.aboutEyebrow}
               </div>
               <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(26px, 3vw, 38px)', fontWeight: 600, color: '#0D1B2A', marginBottom: '28px', lineHeight: 1.25 }}>
-                El origen de una buena decisión.
+                {TEXTS.home.aboutTitle}
               </h2>
               <p style={{ fontFamily: "'Montserrat'", fontSize: '15px', color: '#5C636B', lineHeight: 1.85, marginBottom: '18px' }}>
-                En ORIGEN creemos que cada operación inmobiliaria comienza mucho antes de una firma. Comienza con una decisión, una necesidad o un proyecto.
+                {TEXTS.home.aboutParagraph1}
               </p>
               <p style={{ fontFamily: "'Montserrat'", fontSize: '15px', color: '#5C636B', lineHeight: 1.85, marginBottom: '36px' }}>
-                Nuestro objetivo es acompañarte con información, conocimiento y una mirada clara sobre cada oportunidad.
+                {TEXTS.home.aboutParagraph2}
               </p>
               <button
                 onClick={() => navigate('contact')}
@@ -469,7 +473,7 @@ export default function Home({ navigate, waConfig }: NavProps) {
                 onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#0D1B2A'; e.currentTarget.style.color = '#F5F2EC' }}
                 onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#0D1B2A' }}
               >
-                Conocer más sobre Origen
+                {TEXTS.home.aboutButton}
               </button>
             </FadeSection>
           </div>
@@ -480,7 +484,7 @@ export default function Home({ navigate, waConfig }: NavProps) {
       <section className="relative flex items-center justify-center" style={{ height: '520px', backgroundColor: '#0D1B2A' }}>
         <img
           src={`${IMAGES.cta}?w=1400&h=1040&fit=crop&auto=format`}
-          alt="Arquitectura premium"
+          alt={TEXTS.home.finalCtaImageAlt}
           className="absolute inset-0 w-full h-full object-cover"
           style={{ opacity: 0.35 }}
         />
@@ -488,13 +492,13 @@ export default function Home({ navigate, waConfig }: NavProps) {
         <div className="relative text-center px-6">
           <FadeSection>
             <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(32px, 5vw, 56px)', fontWeight: 600, color: '#F5F2EC', marginBottom: '12px', lineHeight: 1.15 }}>
-              Todo proyecto tiene un origen.
+              {TEXTS.home.finalCtaTitle}
             </h2>
             <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(18px, 2.5vw, 26px)', fontStyle: 'italic', color: 'rgba(245,242,236,0.65)', marginBottom: '40px' }}>
-              Encontrá el tuyo.
+              {TEXTS.home.finalCtaSubtitle}
             </p>
             <a
-              href="https://wa.me/5493515000000"
+              href={buildWAContactUrl(waConfig)}
               target="_blank"
               rel="noopener noreferrer"
               style={{
@@ -517,7 +521,7 @@ export default function Home({ navigate, waConfig }: NavProps) {
               onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#B88E3A'; e.currentTarget.style.color = '#0D1B2A' }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
-              Hablar con Origen
+              {TEXTS.common.talkToOrigen}
             </a>
           </FadeSection>
         </div>

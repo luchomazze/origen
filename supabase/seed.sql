@@ -1,114 +1,130 @@
 begin;
 
+-- Demo seed for the current Supabase schema.
+-- IDs are deterministic so relations can be reseeded safely.
+
 insert into public.listings (
-  id, tipo, titulo, slug, descripcion, precio, moneda, precio_desde,
-  estado_publicacion, estado_comercial, ciudad, barrio, direccion,
-  latitud, longitud, superficie_m2, tipo_propiedad, dormitorios, banos,
-  cocheras, ambientes, apto_credito, fecha_entrega, financiamiento,
-  services
+  id, type, title, description, operation, address, neighborhood, city,
+  latitude, longitude, price, currency, financing, delivery_date, services,
+  publication_status, commercial_status, whatsapp_enabled
 ) values
-('p1', 'PROPIEDAD', 'Casa en Manantiales', 'casa-en-manantiales-p1', 'Amplia casa en uno de los barrios más consolidados de Córdoba Sur. Planta baja y primer piso con amplios espacios, jardín y cochera cubierta.', 245000, 'USD', false, 'PUBLICADO', 'DISPONIBLE', 'Córdoba', 'Manantiales', null, -31.46, -64.22, 185, 'CASA', 3, 2, 2, 5, false, null, null, array['Gas natural', 'Agua corriente', 'Electricidad', 'Cloacas', 'Internet']),
-('p2', 'PROPIEDAD', 'Departamento en Barrio Jardín', 'departamento-barrio-jardin-p2', 'Departamento luminoso con balcón orientado al norte. Edificio con amenities. Ideal para inversión o vivienda propia.', 118000, 'USD', false, 'PUBLICADO', 'DISPONIBLE', 'Córdoba', 'Barrio Jardín', null, -31.40, -64.18, 78, 'DEPARTAMENTO', 2, 1, 1, 3, true, null, null, array['Gas natural', 'Agua corriente', 'Electricidad', 'Cloacas', 'Internet', 'Fibra óptica']),
-('p3', 'PROPIEDAD', 'Casa en Jardines del Jockey', 'casa-jardines-del-jockey-p3', 'Casa de categoría en barrio cerrado con acceso controlado. Amplio jardín, pileta y terminaciones de primera calidad.', 380000, 'USD', false, 'PUBLICADO', 'DISPONIBLE', 'Córdoba', 'Jardines del Jockey', null, -31.44, -64.20, 280, 'CASA', 4, 3, 2, 7, false, null, null, array[]::text[]),
-('p4', 'PROPIEDAD', 'PH en Camino San Carlos', 'ph-camino-san-carlos-p4', 'PH en planta alta con terraza propia. Diseño moderno, cocina integrada y excelente iluminación natural.', 85000, 'USD', false, 'PUBLICADO', 'DISPONIBLE', 'Córdoba', 'Camino San Carlos', null, -31.50, -64.25, 52, 'PH', 1, 1, 1, 2, true, null, null, array[]::text[]),
-('p5', 'PROPIEDAD', 'Casa en Manantiales', 'casa-manantiales-p5', 'Residencia de categoría superior en Manantiales. Amplísimos espacios interiores y exteriores.', 520000, 'USD', false, 'PUBLICADO', 'DISPONIBLE', 'Córdoba', 'Manantiales', null, -31.46, -64.23, 340, 'CASA', 5, 4, 3, 9, false, null, null, array[]::text[]),
-('p6', 'PROPIEDAD', 'Departamento en Barrio Jardín', 'departamento-barrio-jardin-p6', 'Departamento de 3 ambientes en edificio de categoría. Se encuentra reservado — consultá disponibilidad.', 175000, 'USD', false, 'PUBLICADO', 'RESERVADO', 'Córdoba', 'Barrio Jardín', null, -31.41, -64.19, 110, 'DEPARTAMENTO', 3, 2, 1, 4, true, null, null, array[]::text[]),
-('p7', 'PROPIEDAD', 'Casa en Jardines del Jockey', 'casa-jardines-del-jockey-p7', 'Casa en uno de los barrios más buscados del sur de la ciudad. Buen estado de conservación.', 295000, 'USD', false, 'PUBLICADO', 'EN_NEGOCIACION', 'Córdoba', 'Jardines del Jockey', null, -31.45, -64.21, 210, 'CASA', 3, 2, 2, 6, false, null, null, array[]::text[]),
-('p8', 'PROPIEDAD', 'Departamento en Camino San Carlos', 'departamento-camino-san-carlos-p8', 'Departamento de 2 dormitorios en un complejo tranquilo con amplios espacios verdes.', 138000, 'USD', false, 'PUBLICADO', 'DISPONIBLE', 'Córdoba', 'Camino San Carlos', null, -31.51, -64.26, 88, 'DEPARTAMENTO', 2, 2, 1, 3, true, null, null, array[]::text[]),
-('t1', 'TERRENO', 'Lote en Manantiales', 'lote-manantiales-t1', 'Lote en ubicación privilegiada dentro de Manantiales. Todos los servicios disponibles.', 42000, 'USD', false, 'PUBLICADO', 'DISPONIBLE', 'Córdoba', 'Manantiales', null, -31.47, -64.22, 600, null, null, null, null, null, null, null, null, array['Agua corriente', 'Electricidad', 'Cloacas', 'Gas natural']),
-('t2', 'TERRENO', 'Lote en Barrio Jardín', 'lote-barrio-jardin-t2', 'Terreno en Barrio Jardín, zona consolidada y con fácil acceso.', 35000, 'USD', false, 'PUBLICADO', 'DISPONIBLE', 'Córdoba', 'Barrio Jardín', null, -31.41, -64.18, 450, null, null, null, null, null, null, null, null, array['Agua corriente', 'Electricidad']),
-('t3', 'TERRENO', 'Loteo Los Álamos', 'loteo-los-alamos-t3', 'Loteo residencial en Docta, una de las zonas de mayor crecimiento de Córdoba Sur. Lotes de diferentes medidas con todos los servicios.', 35000, 'USD', true, 'PUBLICADO', 'DISPONIBLE', 'Córdoba', 'Docta', null, -31.52, -64.28, null, null, null, null, null, null, null, null, null, array['Agua corriente', 'Electricidad', 'Cloacas', 'Gas natural', 'Internet']),
-('t4', 'TERRENO', 'Terreno en Jardines del Jockey', 'terreno-jardines-del-jockey-t4', 'Terreno amplio en zona residencial consolidada.', 55000, 'USD', false, 'PUBLICADO', 'DISPONIBLE', 'Córdoba', 'Jardines del Jockey', null, -31.44, -64.20, 800, null, null, null, null, null, null, null, null, array['Agua corriente', 'Electricidad', 'Cloacas', 'Seguridad']),
-('t5', 'TERRENO', 'Terreno en Manantiales', 'terreno-manantiales-t5', 'Gran terreno en Manantiales con excelente ubicación y frente generoso.', 72000, 'USD', false, 'PUBLICADO', 'DISPONIBLE', 'Córdoba', 'Manantiales', null, -31.48, -64.23, 950, null, null, null, null, null, null, null, null, array['Agua corriente', 'Electricidad', 'Cloacas', 'Gas natural', 'Internet', 'Fibra óptica']),
-('e1', 'EMPRENDIMIENTO', 'Origen Park', 'origen-park', 'Un nuevo concepto residencial en el corazón de Manantiales. Proyecto pensado para quienes buscan combinar calidad de vida, ubicación y una oportunidad de inversión. Arquitectura contemporánea que prioriza la luz natural y los espacios bien resueltos.', 75000, 'USD', true, 'PUBLICADO', 'DISPONIBLE', 'Córdoba', 'Manantiales', 'Manantiales, Córdoba Sur', -31.46, -64.22, null, null, null, null, null, null, null, 'Diciembre 2028', 'Anticipo del 30% + cuotas en pesos ajustadas por índice. Datos de carácter demostrativo.', array['Gas natural', 'Agua corriente', 'Electricidad', 'Cloacas', 'Internet', 'Fibra óptica', 'Seguridad']),
-('e2', 'EMPRENDIMIENTO', 'Altos del Sur', 'altos-del-sur', 'Un proyecto de gran escala que redefine el horizonte residencial en la zona sur de Córdoba. Vistas panorámicas únicas y unidades amplias diseñadas para quienes buscan una vivienda de calidad o una inversión de largo plazo.', 95000, 'USD', true, 'PUBLICADO', 'DISPONIBLE', 'Córdoba', 'Córdoba Sur', 'Zona Sur, Córdoba', -31.49, -64.25, null, null, null, null, null, null, null, 'Junio 2027', 'Anticipo del 25% + cuotas en pesos. Datos de carácter demostrativo.', array[]::text[]),
-('e3', 'EMPRENDIMIENTO', 'La Arboleda', 'la-arboleda', 'Proyecto finalizado y entregado. Un entorno natural privilegiado con unidades diseñadas para quienes priorizan calidad de vida. Unidades disponibles para entrega inmediata.', 135000, 'USD', true, 'PUBLICADO', 'EN_NEGOCIACION', 'Córdoba', 'Camino San Carlos', 'Camino San Carlos, Córdoba Sur', -31.51, -64.27, null, null, null, null, null, null, null, 'Entregado', null, array[]::text[])
+('00000000-0000-4000-8000-000000000001', 'propiedad', 'Casa en Manantiales', 'Amplia casa en uno de los barrios más consolidados de Córdoba Sur. Planta baja y primer piso con jardín y cochera cubierta.', 'venta', null, 'Manantiales', 'Córdoba', -31.46, -64.22, 245000, 'USD', false, null, array['Gas natural', 'Agua corriente', 'Electricidad', 'Cloacas', 'Internet'], 'publicado', 'disponible', true),
+('00000000-0000-4000-8000-000000000002', 'propiedad', 'Departamento en Barrio Jardín', 'Departamento luminoso con balcón orientado al norte. Edificio con amenities. Ideal para inversión o vivienda propia.', 'venta', null, 'Barrio Jardín', 'Córdoba', -31.40, -64.18, 118000, 'USD', false, null, array['Gas natural', 'Agua corriente', 'Electricidad', 'Cloacas', 'Internet', 'Fibra óptica'], 'publicado', 'disponible', true),
+('00000000-0000-4000-8000-000000000003', 'propiedad', 'Casa en Jardines del Jockey', 'Casa de categoría en barrio cerrado con acceso controlado. Amplio jardín, pileta y terminaciones de primera calidad.', 'venta', null, 'Jardines del Jockey', 'Córdoba', -31.44, -64.20, 380000, 'USD', false, null, array[]::text[], 'publicado', 'disponible', true),
+('00000000-0000-4000-8000-000000000004', 'propiedad', 'PH en Camino San Carlos', 'PH en planta alta con terraza propia. Diseño moderno, cocina integrada y excelente iluminación natural.', 'venta', null, 'Camino San Carlos', 'Córdoba', -31.50, -64.25, 85000, 'USD', false, null, array[]::text[], 'publicado', 'disponible', true),
+('00000000-0000-4000-8000-000000000005', 'propiedad', 'Casa en Manantiales', 'Residencia de categoría superior en Manantiales. Amplísimos espacios interiores y exteriores.', 'venta', null, 'Manantiales', 'Córdoba', -31.46, -64.23, 520000, 'USD', false, null, array[]::text[], 'publicado', 'disponible', true),
+('00000000-0000-4000-8000-000000000006', 'propiedad', 'Departamento en Barrio Jardín', 'Departamento de 3 ambientes en edificio de categoría. Se encuentra reservado — consultá disponibilidad.', 'venta', null, 'Barrio Jardín', 'Córdoba', -31.41, -64.19, 175000, 'USD', false, null, array[]::text[], 'publicado', 'reservado', true),
+('00000000-0000-4000-8000-000000000007', 'propiedad', 'Casa en Jardines del Jockey', 'Casa en uno de los barrios más buscados del sur de la ciudad. Buen estado de conservación.', 'venta', null, 'Jardines del Jockey', 'Córdoba', -31.45, -64.21, 295000, 'USD', false, null, array[]::text[], 'publicado', 'disponible', true),
+('00000000-0000-4000-8000-000000000008', 'propiedad', 'Departamento en Camino San Carlos', 'Departamento de 2 dormitorios en un complejo tranquilo con amplios espacios verdes.', 'venta', null, 'Camino San Carlos', 'Córdoba', -31.51, -64.26, 138000, 'USD', false, null, array[]::text[], 'publicado', 'disponible', true),
+('00000000-0000-4000-8000-000000000009', 'terreno', 'Lote en Manantiales', 'Lote en ubicación privilegiada dentro de Manantiales. Todos los servicios disponibles.', 'venta', null, 'Manantiales', 'Córdoba', -31.47, -64.22, 42000, 'USD', false, null, array['Agua corriente', 'Electricidad', 'Cloacas', 'Gas natural'], 'publicado', 'disponible', true),
+('00000000-0000-4000-8000-000000000010', 'terreno', 'Lote en Barrio Jardín', 'Terreno en Barrio Jardín, zona consolidada y con fácil acceso.', 'venta', null, 'Barrio Jardín', 'Córdoba', -31.41, -64.18, 35000, 'USD', false, null, array['Agua corriente', 'Electricidad'], 'publicado', 'disponible', true),
+('00000000-0000-4000-8000-000000000011', 'terreno', 'Loteo Los Álamos', 'Loteo residencial en Docta, una de las zonas de mayor crecimiento de Córdoba Sur.', 'venta', null, 'Docta', 'Córdoba', -31.52, -64.28, 35000, 'USD', true, null, array['Agua corriente', 'Electricidad', 'Cloacas', 'Gas natural', 'Internet'], 'publicado', 'disponible', true),
+('00000000-0000-4000-8000-000000000012', 'terreno', 'Terreno en Jardines del Jockey', 'Terreno amplio en zona residencial consolidada.', 'venta', null, 'Jardines del Jockey', 'Córdoba', -31.44, -64.20, 55000, 'USD', false, null, array['Agua corriente', 'Electricidad', 'Cloacas', 'Seguridad'], 'publicado', 'disponible', true),
+('00000000-0000-4000-8000-000000000013', 'terreno', 'Terreno en Manantiales', 'Gran terreno en Manantiales con excelente ubicación y frente generoso.', 'venta', null, 'Manantiales', 'Córdoba', -31.48, -64.23, 72000, 'USD', false, null, array['Agua corriente', 'Electricidad', 'Cloacas', 'Gas natural', 'Internet', 'Fibra óptica'], 'publicado', 'disponible', true),
+('00000000-0000-4000-8000-000000000014', 'emprendimiento', 'Origen Park', 'Un nuevo concepto residencial en el corazón de Manantiales. Arquitectura contemporánea, calidad de vida y oportunidad de inversión.', 'venta', 'Manantiales, Córdoba Sur', 'Manantiales', 'Córdoba', -31.46, -64.22, 75000, 'USD', true, '2028-12-01', array['Gas natural', 'Agua corriente', 'Electricidad', 'Cloacas', 'Internet', 'Fibra óptica', 'Seguridad'], 'publicado', 'disponible', true),
+('00000000-0000-4000-8000-000000000015', 'emprendimiento', 'Altos del Sur', 'Proyecto de gran escala con vistas panorámicas y unidades amplias en la zona sur de Córdoba.', 'venta', 'Zona Sur, Córdoba', 'Córdoba Sur', 'Córdoba', -31.49, -64.25, 95000, 'USD', true, '2027-06-01', array[]::text[], 'publicado', 'disponible', true),
+('00000000-0000-4000-8000-000000000016', 'emprendimiento', 'La Arboleda', 'Proyecto finalizado y entregado, con unidades disponibles para entrega inmediata.', 'venta', 'Camino San Carlos, Córdoba Sur', 'Camino San Carlos', 'Córdoba', -31.51, -64.27, 135000, 'USD', true, null, array[]::text[], 'publicado', 'disponible', true)
 on conflict (id) do update set
-  tipo = excluded.tipo,
-  titulo = excluded.titulo,
-  slug = excluded.slug,
-  descripcion = excluded.descripcion,
-  precio = excluded.precio,
-  moneda = excluded.moneda,
-  precio_desde = excluded.precio_desde,
-  estado_publicacion = excluded.estado_publicacion,
-  estado_comercial = excluded.estado_comercial,
-  ciudad = excluded.ciudad,
-  barrio = excluded.barrio,
-  direccion = excluded.direccion,
-  latitud = excluded.latitud,
-  longitud = excluded.longitud,
-  superficie_m2 = excluded.superficie_m2,
-  tipo_propiedad = excluded.tipo_propiedad,
-  dormitorios = excluded.dormitorios,
-  banos = excluded.banos,
-  cocheras = excluded.cocheras,
-  ambientes = excluded.ambientes,
-  apto_credito = excluded.apto_credito,
-  fecha_entrega = excluded.fecha_entrega,
-  financiamiento = excluded.financiamiento,
-  services = excluded.services;
+  type = excluded.type,
+  title = excluded.title,
+  description = excluded.description,
+  operation = excluded.operation,
+  address = excluded.address,
+  neighborhood = excluded.neighborhood,
+  city = excluded.city,
+  latitude = excluded.latitude,
+  longitude = excluded.longitude,
+  price = excluded.price,
+  price_from = excluded.price_from,
+  currency = excluded.currency,
+  financing = excluded.financing,
+  delivery_date = excluded.delivery_date,
+  services = excluded.services,
+  publication_status = excluded.publication_status,
+  commercial_status = excluded.commercial_status,
+  whatsapp_enabled = excluded.whatsapp_enabled;
 
-delete from public.listing_units where listing_id in ('t3', 'e1', 'e2', 'e3');
-delete from public.listing_images where listing_id in ('p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8', 't1', 't2', 't3', 't4', 't5', 'e1', 'e2', 'e3');
+update public.listings
+set price_from = id in (
+  '00000000-0000-4000-8000-000000000014',
+  '00000000-0000-4000-8000-000000000015',
+  '00000000-0000-4000-8000-000000000016'
+)
+where id between '00000000-0000-4000-8000-000000000001' and '00000000-0000-4000-8000-000000000016';
 
-insert into public.listing_units (id, listing_id, nombre, descripcion, superficie_m2, dormitorios, banos, cocheras, precio, moneda, estado_comercial, orden) values
-('u-t3-1', 't3', 'Lote 01', null, 360, null, null, null, 35000, 'USD', 'DISPONIBLE', 1),
-('u-t3-2', 't3', 'Lote 02', null, 420, null, null, null, 42000, 'USD', 'RESERVADO', 2),
-('u-t3-3', 't3', 'Lote 03', null, 380, null, null, null, 37000, 'USD', 'DISPONIBLE', 3),
-('u-t3-4', 't3', 'Lote 04', null, 460, null, null, null, 46000, 'USD', 'DISPONIBLE', 4),
-('u-t3-5', 't3', 'Lote 05', null, 390, null, null, null, 39000, 'USD', 'VENDIDO', 5),
-('u-e1-1', 'e1', '1 dormitorio', 'Unidad de 1 dormitorio con cocina integrada y balcón.', 48, 1, 1, null, 75000, 'USD', 'DISPONIBLE', 1),
-('u-e1-2', 'e1', '1 dormitorio premium', 'Unidad de 1 dormitorio en piso superior con vista privilegiada.', 55, 1, 1, null, 88000, 'USD', 'DISPONIBLE', 2),
-('u-e1-3', 'e1', '2 dormitorios', 'Unidad de 2 dormitorios con living-comedor amplio.', 68, 2, 1, null, 105000, 'USD', 'RESERVADO', 3),
-('u-e1-4', 'e1', '2 dormitorios suite', 'Unidad de 2 dormitorios con suite y toilette.', 75, 2, 2, null, 118000, 'USD', 'DISPONIBLE', 4),
-('u-e2-1', 'e2', '2 dormitorios', null, 68, 2, 1, null, 95000, 'USD', 'DISPONIBLE', 1),
-('u-e2-2', 'e2', '2 dormitorios amplio', null, 82, 2, 2, null, 115000, 'USD', 'DISPONIBLE', 2),
-('u-e2-3', 'e2', '3 dormitorios', null, 95, 3, 2, null, 138000, 'USD', 'DISPONIBLE', 3),
-('u-e2-4', 'e2', '3 dormitorios suite', null, 110, 3, 3, 1, 162000, 'USD', 'RESERVADO', 4),
-('u-e3-1', 'e3', '2 dormitorios', null, 72, 2, 1, null, 135000, 'USD', 'DISPONIBLE', 1),
-('u-e3-2', 'e3', '3 dormitorios', null, 98, 3, 2, 1, 168000, 'USD', 'EN_NEGOCIACION', 2);
+delete from public.listing_typologies where listing_id in (
+  '00000000-0000-4000-8000-000000000011',
+  '00000000-0000-4000-8000-000000000014',
+  '00000000-0000-4000-8000-000000000015',
+  '00000000-0000-4000-8000-000000000016'
+);
 
-insert into public.listing_images (listing_id, external_url, alt_text, sort_order, is_cover) values
-('p1', 'https://images.unsplash.com/photo-1721815693498-cc28507c0ba2', 'Casa en Manantiales', 0, true),
-('p1', 'https://images.unsplash.com/photo-1724582586529-62622e50c0b3', 'Casa en Manantiales', 1, false),
-('p1', 'https://images.unsplash.com/photo-1628744876497-eb30460be9f6', 'Casa en Manantiales', 2, false),
-('p2', 'https://images.unsplash.com/photo-1722421492323-eaf9c401befe', 'Departamento en Barrio Jardín', 0, true),
-('p2', 'https://images.unsplash.com/photo-1724582586529-62622e50c0b3', 'Departamento en Barrio Jardín', 1, false),
-('p3', 'https://images.unsplash.com/photo-1698994705178-d244d73ea573', 'Casa en Jardines del Jockey', 0, true),
-('p3', 'https://images.unsplash.com/photo-1628744876497-eb30460be9f6', 'Casa en Jardines del Jockey', 1, false),
-('p3', 'https://images.unsplash.com/photo-1724582586529-62622e50c0b3', 'Casa en Jardines del Jockey', 2, false),
-('p4', 'https://images.unsplash.com/photo-1748063578185-3d68121b11ff', 'PH en Camino San Carlos', 0, true),
-('p5', 'https://images.unsplash.com/photo-1756706718604-ef4af3970e33', 'Casa en Manantiales', 0, true),
-('p5', 'https://images.unsplash.com/photo-1724582586529-62622e50c0b3', 'Casa en Manantiales', 1, false),
-('p6', 'https://images.unsplash.com/photo-1624204386084-dd8c05e32226', 'Departamento en Barrio Jardín', 0, true),
-('p7', 'https://images.unsplash.com/photo-1706164971302-e30c0640cc3b', 'Casa en Jardines del Jockey', 0, true),
-('p7', 'https://images.unsplash.com/photo-1628744876497-eb30460be9f6', 'Casa en Jardines del Jockey', 1, false),
-('p8', 'https://images.unsplash.com/photo-1722421492323-eaf9c401befe', 'Departamento en Camino San Carlos', 0, true),
-('t1', 'https://images.unsplash.com/photo-1699375348655-c4564465969b', 'Lote en Manantiales', 0, true),
-('t2', 'https://images.unsplash.com/photo-1637071985253-e5417fa2a47b', 'Lote en Barrio Jardín', 0, true),
-('t3', 'https://images.unsplash.com/photo-1592113690727-36218027ff4f', 'Loteo Los Álamos', 0, true),
-('t3', 'https://images.unsplash.com/photo-1699375348655-c4564465969b', 'Loteo Los Álamos', 1, false),
-('t4', 'https://images.unsplash.com/photo-1637071985253-e5417fa2a47b', 'Terreno en Jardines del Jockey', 0, true),
-('t5', 'https://images.unsplash.com/photo-1699375348655-c4564465969b', 'Terreno en Manantiales', 0, true),
-('e1', 'https://images.unsplash.com/photo-1624204386084-dd8c05e32226', 'Origen Park', 0, true),
-('e1', 'https://images.unsplash.com/photo-1724582586529-62622e50c0b3', 'Origen Park', 1, false),
-('e1', 'https://images.unsplash.com/photo-1628744876497-eb30460be9f6', 'Origen Park', 2, false),
-('e1', 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00', 'Origen Park', 3, false),
-('e2', 'https://images.unsplash.com/photo-1515263487990-61b07816b324', 'Altos del Sur', 0, true),
-('e2', 'https://images.unsplash.com/photo-1628744876497-eb30460be9f6', 'Altos del Sur', 1, false),
-('e2', 'https://images.unsplash.com/photo-1724582586529-62622e50c0b3', 'Altos del Sur', 2, false),
-('e3', 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00', 'La Arboleda', 0, true),
-('e3', 'https://images.unsplash.com/photo-1724582586529-62622e50c0b3', 'La Arboleda', 1, false),
-('e3', 'https://images.unsplash.com/photo-1628744876497-eb30460be9f6', 'La Arboleda', 2, false);
-
-insert into public.site_settings (id, whatsapp_number, whatsapp_message_project, whatsapp_message_property, whatsapp_message_land, instagram_url)
-values ('global', '5493515000000', 'Hola ORIGEN, quiero consultar por el emprendimiento {nombre}.', 'Hola ORIGEN, quiero consultar por la propiedad {nombre}.', 'Hola ORIGEN, quiero consultar por el terreno {nombre}.', 'https://instagram.com/origeninversiones')
+insert into public.listing_typologies (id, listing_id, name, description, surface_m2, price, currency, bedrooms, bathrooms) values
+('10000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000011', 'Lote 01', null, 360, 35000, 'USD', null, null),
+('10000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000011', 'Lote 02', null, 420, 42000, 'USD', null, null),
+('10000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000011', 'Lote 03', null, 380, 37000, 'USD', null, null),
+('10000000-0000-4000-8000-000000000004', '00000000-0000-4000-8000-000000000011', 'Lote 04', null, 460, 46000, 'USD', null, null),
+('10000000-0000-4000-8000-000000000005', '00000000-0000-4000-8000-000000000011', 'Lote 05', null, 390, 39000, 'USD', null, null),
+('10000000-0000-4000-8000-000000000006', '00000000-0000-4000-8000-000000000014', '1 dormitorio', 'Unidad con cocina integrada y balcón.', 48, 75000, 'USD', 1, 1),
+('10000000-0000-4000-8000-000000000007', '00000000-0000-4000-8000-000000000014', '1 dormitorio premium', 'Unidad en piso superior con vista privilegiada.', 55, 88000, 'USD', 1, 1),
+('10000000-0000-4000-8000-000000000008', '00000000-0000-4000-8000-000000000014', '2 dormitorios', 'Unidad con living-comedor amplio.', 68, 105000, 'USD', 2, 1),
+('10000000-0000-4000-8000-000000000009', '00000000-0000-4000-8000-000000000014', '2 dormitorios suite', 'Unidad con suite y toilette.', 75, 118000, 'USD', 2, 2),
+('10000000-0000-4000-8000-000000000010', '00000000-0000-4000-8000-000000000015', '2 dormitorios', null, 68, 95000, 'USD', 2, 1),
+('10000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000015', '2 dormitorios amplio', null, 82, 115000, 'USD', 2, 2),
+('10000000-0000-4000-8000-000000000012', '00000000-0000-4000-8000-000000000015', '3 dormitorios', null, 95, 138000, 'USD', 3, 2),
+('10000000-0000-4000-8000-000000000013', '00000000-0000-4000-8000-000000000015', '3 dormitorios suite', null, 110, 162000, 'USD', 3, 3),
+('10000000-0000-4000-8000-000000000014', '00000000-0000-4000-8000-000000000016', '2 dormitorios', null, 72, 135000, 'USD', 2, 1),
+('10000000-0000-4000-8000-000000000015', '00000000-0000-4000-8000-000000000016', '3 dormitorios', null, 98, 168000, 'USD', 3, 2)
 on conflict (id) do update set
-  whatsapp_number = excluded.whatsapp_number,
-  whatsapp_message_project = excluded.whatsapp_message_project,
-  whatsapp_message_property = excluded.whatsapp_message_property,
-  whatsapp_message_land = excluded.whatsapp_message_land,
-  instagram_url = excluded.instagram_url;
+  listing_id = excluded.listing_id,
+  name = excluded.name,
+  description = excluded.description,
+  surface_m2 = excluded.surface_m2,
+  price = excluded.price,
+  currency = excluded.currency,
+  bedrooms = excluded.bedrooms,
+  bathrooms = excluded.bathrooms;
+
+delete from public.listing_images where listing_id in (
+  '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002',
+  '00000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000004',
+  '00000000-0000-4000-8000-000000000005', '00000000-0000-4000-8000-000000000006',
+  '00000000-0000-4000-8000-000000000007', '00000000-0000-4000-8000-000000000008',
+  '00000000-0000-4000-8000-000000000009', '00000000-0000-4000-8000-000000000010',
+  '00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000012',
+  '00000000-0000-4000-8000-000000000013', '00000000-0000-4000-8000-000000000014',
+  '00000000-0000-4000-8000-000000000015', '00000000-0000-4000-8000-000000000016'
+);
+
+insert into public.listing_images (listing_id, image_url, display_order) values
+('00000000-0000-4000-8000-000000000001', 'https://images.unsplash.com/photo-1721815693498-cc28507c0ba2', 0),
+('00000000-0000-4000-8000-000000000002', 'https://images.unsplash.com/photo-1722421492323-eaf9c401befe', 0),
+('00000000-0000-4000-8000-000000000003', 'https://images.unsplash.com/photo-1698994705178-d244d73ea573', 0),
+('00000000-0000-4000-8000-000000000004', 'https://images.unsplash.com/photo-1748063578185-3d68121b11ff', 0),
+('00000000-0000-4000-8000-000000000005', 'https://images.unsplash.com/photo-1756706718604-ef4af3970e33', 0),
+('00000000-0000-4000-8000-000000000006', 'https://images.unsplash.com/photo-1624204386084-dd8c05e32226', 0),
+('00000000-0000-4000-8000-000000000007', 'https://images.unsplash.com/photo-1706164971302-e30c0640cc3b', 0),
+('00000000-0000-4000-8000-000000000008', 'https://images.unsplash.com/photo-1722421492323-eaf9c401befe', 0),
+('00000000-0000-4000-8000-000000000009', 'https://images.unsplash.com/photo-1699375348655-c4564465969b', 0),
+('00000000-0000-4000-8000-000000000010', 'https://images.unsplash.com/photo-1637071985253-e5417fa2a47b', 0),
+('00000000-0000-4000-8000-000000000011', 'https://images.unsplash.com/photo-1592113690727-36218027ff4f', 0),
+('00000000-0000-4000-8000-000000000012', 'https://images.unsplash.com/photo-1637071985253-e5417fa2a47b', 0),
+('00000000-0000-4000-8000-000000000013', 'https://images.unsplash.com/photo-1699375348655-c4564465969b', 0),
+('00000000-0000-4000-8000-000000000014', 'https://images.unsplash.com/photo-1624204386084-dd8c05e32226', 0),
+('00000000-0000-4000-8000-000000000015', 'https://images.unsplash.com/photo-1515263487990-61b07816b324', 0),
+('00000000-0000-4000-8000-000000000016', 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00', 0);
+
+insert into public.site_settings (
+  site_name, whatsapp_number, instagram_url, whatsapp_enabled,
+  whatsapp_template_emprendimiento, whatsapp_template_propiedad, whatsapp_template_terreno,
+  site_description
+)
+select
+  'ORIGEN', '5493515000000', 'https://instagram.com/origeninversiones', true,
+  'Hola ORIGEN, quiero consultar por el emprendimiento {nombre}.',
+  'Hola ORIGEN, quiero consultar por la propiedad {nombre}.',
+  'Hola ORIGEN, quiero consultar por el terreno {nombre}.',
+  'Inversiones inmobiliarias en Córdoba Sur.'
+where not exists (select 1 from public.site_settings);
 
 commit;

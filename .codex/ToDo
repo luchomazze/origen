@@ -1,5 +1,7 @@
 # ORIGEN - Roadmap a production ready
 
+> Specs de features pendientes (formato spec-driven) y analisis de estado real vs este ToDo: `.codex/specs/README.md`. Cada item pendiente indica su spec como `[F01]`.
+
 ## Decisiones
 
 - Repositorio publico previsto: `origen-real-estate`.
@@ -17,8 +19,8 @@
 
 - [x] Revisar la estructura actual y detectar que no habia repositorio Git local.
 - [x] Definir nombre de repositorio: `origen-real-estate`.
-- [ ] Crear el repositorio publico remoto y configurar el push inicial.
-- [ ] Revisar el historial local antes del primer push para descartar secretos.
+- [x] Crear el repositorio publico remoto y configurar el push inicial.
+- [x] Revisar el historial local antes del primer push para descartar secretos.
 - [x] Crear `.env.example` sin credenciales.
 - [x] Ajustar `.gitignore` para excluir `.env`, `.supabase`, dumps, logs, `node_modules` y `dist`.
 - [x] Documentar Node, pnpm, instalacion, comandos y variables en `README.md`.
@@ -38,70 +40,113 @@
 
 ## Sprint 2 - Modelo Supabase y migracion
 
-- [x] Crear migraciones para `listings`, `listing_units`, `listing_images`, `site_settings` y perfiles.
+- [x] Agregar `price_from boolean` a `listings` y mapearlo a `precio_desde` en la UI.
+- [x] Ajustar `initial_schema.sql` al esquema remoto: `description`, `operation`, `services`, `whatsapp_message` y coordenadas ya coincidian (nullable, `numeric`); se corrigieron `currency`, `financing` y `whatsapp_enabled`, que en el archivo eran `not null` pero en Supabase son nullable.
+- [x] Ejecutar `20260922000000_add_price_from.sql` en Supabase y verificar `price_from` en una publicación real.
 - [x] Definir checks, claves, indices y slug unico.
 - [x] Definir relacion uno-a-muchos entre listings y unidades.
 - [x] Mantener `services` como `text[]` en el MVP.
-- [x] Crear seed reproducible con 16 listings, 15 unidades y 31 imagenes demo.
-- [x] Mantener mocks durante la transicion y retirarlos al validar Supabase.
+- [x] Crear seed reproducible compatible con el esquema real: 16 listings, 15 tipologias y 16 imagenes demo.
+- [x] Mantener mocks durante la transicion y retirar imports publicos al validar Supabase.
 
 > La migracion y el seed estan en `supabase/`, pero aun no se ejecutaron contra un proyecto porque Supabase CLI y las credenciales del proyecto todavia no existen.
 
 ## Sprint 3 - Auth y seguridad
 
-- [ ] Configurar Supabase Auth con email y contrasena en el proyecto remoto.
-- [ ] Crear el administrador inicial mediante alta controlada e insertar su perfil `admin`.
+- [x] Configurar Supabase Auth con email y contrasena en el proyecto remoto.
+- [x] Crear el administrador inicial mediante alta controlada e insertar su perfil `admin`.
 - [x] Crear AuthProvider/hook para sesion, carga, expiracion y logout.
 - [x] Proteger el acceso a Admin.
-- [x] Crear migracion RLS para lectura publica de publicaciones visibles.
+- [x] Crear y aplicar politica RLS para lectura publica de publicaciones visibles.
 - [x] Restringir escrituras al administrador autenticado mediante `profiles.role`.
 - [x] Proteger Storage con politicas equivalentes y bucket `listing-images`.
 - [x] No exponer service role key en el cliente.
-- [ ] Aplicar la migracion RLS contra Supabase y probar anonimo/admin con sesiones reales.
-- [ ] Agregar recuperacion de contrasena y definir la politica de invitacion del administrador.
+- [x] Aplicar la politica RLS contra Supabase y probar lectura publica con datos reales.
+- [x] Probar login admin, rechazo de usuario no autorizado y logout.
+- [ ] Agregar recuperacion de contrasena y definir la politica de invitacion del administrador. [F05]
 
 ## Sprint 4 - Datos publicos reales
 
-- [ ] Reemplazar arrays demo por repositorios Supabase.
-- [ ] Agregar estados loading, error, vacio y no encontrado.
-- [ ] Adaptar filtros a datos remotos.
-- [ ] Agregar rutas reales con slug y deep links.
-- [ ] Unificar `Detail.tsx` y `ProjectDetail.tsx`.
+- [x] Crear repositorio Supabase para listings, tipologias e imagenes.
+- [x] Reemplazar arrays demo en Home, propiedades, terrenos, emprendimientos y detalle principal.
+- [x] Retirar el dataset mock del frontend y la vista `ProjectDetail` duplicada no utilizada.
+- [x] Agregar estados loading y error en listados y detalle principal.
+- [x] Completar estados vacio y no encontrado en todas las vistas (2026-09-25). [F01] Listados y ficha ya los tenian. Agregado: (1) pagina 404 real (`NotFound.tsx`, nueva) — `routing.ts` resuelve rutas desconocidas a `'not-found'` en vez de caer en Home; (2) Home oculta las secciones "Emprendimientos destacados"/"Propiedades destacadas" por completo si no hay nada que mostrar, en vez de dejar titulo+grilla vacia; (3) estado "Proximamente" en Propiedades/Terrenos/Emprendimientos cuando `listings.length === 0` (catalogo vacio de verdad, no por filtros), con CTA de WhatsApp propio (`TEXTS.common.comingSoonInquiryMessage`) — el "Sin resultados / Probá con otros filtros" generico ahora solo aparece cuando hay datos pero los filtros no matchean nada. La nav/seccion sigue existiendo siempre.
+- [x] Adaptar filtros de propiedades, terrenos y emprendimientos a datos remotos.
+- [x] Agregar buscador de texto (titulo/barrio/ciudad/direccion) en Propiedades, Terrenos y Emprendimientos. Decision: buscador en las 3 paginas de catalogo, no en Home (el catalogo es chico y Home no tiene a donde redirigir la busqueda todavia).
+- [x] Rediseño UX del buscador+filtros (2026-09-24, analisis UX/UI + psicologia del diseño): el buscador aislado en el hero desarmonizaba con los filtros de abajo (dos sistemas visuales distintos, jerarquia de peso invertida, sobrecarga de decisiones antes de ver resultados). Se unificaron en un solo panel colapsable "Buscar y filtrar" (colapsado por defecto, con contador de filtros activos), ubicado arriba de la grilla de resultados — no en el hero, que ahora queda 100% narrativo/de marca. Mismo patron que el panel de Filtros de Admin. Al abrirlo se hace scroll suave hasta el panel (`scrollIntoView` + `scrollMarginTop: 96px` por el header fijo de 80px), dejando fuera de vista el encabezado azul.
+- [x] Ampliar los buscadores (publico y Admin) para que busquen por todos los campos de `listings`, no solo titulo/barrio/ciudad. `searchIndex()` (`listings.ts`) y `adminSearchIndex()` (`adminListingsApi.ts`) concatenan todos los campos relevantes (texto, numericos convertidos a string, servicios, y en el publico tambien nombres/descripciones de unidades) en un solo string buscable. Busqueda multi-palabra: `matchesSearchTerms()` exige que cada palabra este en algun campo (no como frase exacta), asi "casa jockey" matchea tipo=Casa + barrio="Jardines del Jockey" aunque esten en campos distintos.
+- [x] Agregar aclaraciones (hint) debajo de cada campo del formulario de Admin (publicacion y tipologias), estilo descriptivo no restrictivo (ej. "Decimal entre -90 y 90"), mismo lenguaje visual que la nota ya existente en el editor de imagenes.
+- [x] Bug: `Detail.tsx` solo renderizaba la seccion de unidades/tipologias para TERRENO y EMPRENDIMIENTO; PROPIEDAD nunca tenia rama aunque el editor de Admin ya permite cargarle tipologias a cualquier tipo. Se agrego PROPIEDAD a la condicion (reusa el mismo diseño en grilla de "Tipologías disponibles").
+- [x] Agregar link "Ver en el sitio" en el toolbar de edicion de Admin (visible solo si `publication_status === 'publicado'`), navega a la ficha publica real usando el slug (ahora unico). Requirio pasar `navigate` como prop a `AdminPublications`. Como no hay rutas reales de navegador todavia, esto saca al admin del panel (mismo comportamiento que "Ver sitio"), no abre pestaña nueva.
+- [x] Bug real de colision de slugs: `slug = slugify(titulo) + id.slice(0,8)`. Los ids del seed tienen formato `00000000-0000-4000-8000-00000000000X` — los primeros 8 caracteres son siempre "00000000" en TODOS, asi que dos publicaciones con el mismo titulo (ej. las dos "Casa en Jardines del Jockey", ids `...003` y `...007`) terminan con el slug identico. `Detail.tsx` busca por `.find(l => l.slug === slug)`, que siempre devuelve la primera coincidencia — por eso una publicacion con tipologias parecia "no mostrarlas": en realidad se estaba mostrando la otra publicacion duplicada. Diagnosticado repitiendo la query publica real con `curl` + anon key (confirmo que RLS/datos estaban bien, no era permisos). Fix: `slug` ahora usa el id completo (`listingsApi.ts`), garantiza unicidad siempre. No rompe nada porque todavia no hay rutas reales en la URL del navegador (`slug` es solo estado interno). Pendiente: decidir si limpiar las publicaciones duplicadas del seed ("Casa en Jardines del Jockey" x2).
+- [x] Agregar rutas reales con slug y deep links. `src/utils/routing.ts` (`parsePath`/`buildPath`) mapea `Page` <-> URL: `/` home, `/propiedades`, `/propiedades/:slug`, `/terrenos`, `/terrenos/:slug`, `/emprendimientos`, `/emprendimientos/:slug`, `/contacto`, `/admin`. `App.tsx` calcula el estado inicial desde `window.location.pathname` al cargar, `navigate()` hace `history.pushState` ademas de actualizar el state, y un listener de `popstate` sincroniza atras/adelante del navegador. No se agrego react-router (la firma de `navigate(to, slug)` ya la usan decenas de componentes, cambiar de libreria hubiera sido un refactor grande para el mismo resultado). Verificado que el dev server de Vite sirve `index.html` (200) para paths profundos tipo `/propiedades/<slug>`. **Pendiente para cuando se configure Vercel (Sprint 7):** agregar `vercel.json` con rewrite catch-all a `index.html`, si no las rutas profundas van a dar 404 en produccion.
+  - [ ] Resto de [F01]: 404 para rutas desconocidas (hoy caen en Home), links como `<a href>`, filtros en query params, columna `slug` persistida en `listings` (hoy se deriva en el cliente) y redirect del formato viejo.
+- [x] Optimizar carga de `Detail.tsx`: hacia 2 fetches completos identicos (`getPublicListingBySlug` internamente llamaba `getPublicListings`, y se pedia de nuevo aparte para relacionadas). Ahora es 1 solo fetch; se elimino `getPublicListingBySlug` de `listingsApi.ts` por no uso. Pendiente mas a futuro: seguir trayendo TODAS las publicaciones del tipo con sus joins de tipologias/imagenes para mostrar una sola + relacionadas; una vez que haya rutas reales con id/slug se puede pedir solo la publicacion puntual + relacionadas limitadas (`.limit()`).
+- [x] Unificar `Detail.tsx` y `ProjectDetail.tsx`. `ProjectDetail.tsx` ya fue eliminado; `Detail.tsx` cubre los 3 tipos.
+- [ ] Cambiar el mapa de `Detail.tsx` (linea 446, iframe embed de OpenStreetMap) por Google Maps, se percibe mas premium. Comparativa de opciones en [F11]. Requiere API key de Google Maps (`VITE_GOOGLE_MAPS_API_KEY` o similar) y ver costo/billing asociado.
+- [x] Ejecutar grants y validar consultas publicas contra Supabase.
+- [x] Verificar lectura RLS de tipologias e imagenes en detalle: `listing_images` ya tenia policy publica; `listing_typologies` no tenia ninguna (bug real, las unidades no se veian en publicaciones publicadas) y se agrego `"Public can read typologies for visible listings"`.
 
 ## Sprint 5 - Storage e imagenes
 
-- [ ] Crear bucket y definir estrategia de URLs publicas o firmadas.
-- [ ] Validar JPG/PNG/WebP y limite de 10 MB.
-- [ ] Implementar portada, orden, preview, reemplazo y eliminacion.
-- [ ] Persistir metadatos en `listing_images`.
-- [ ] Reemplazar imagenes Unsplash por contenido real o placeholders explicitos.
-- [ ] Limpiar archivos huerfanos.
+- [x] Preparar bucket publico `listing-images`, estrategia de URLs publicas y migraciones idempotentes.
+- [x] Ejecutar las migraciones `20260921004000` y `20260921005000` en Supabase y verificar las politicas RLS de Storage con el admin real: bucket `listing-images` existe y es publico; policies de `storage.objects` confirmadas por `pg_policies`.
+- [x] Validar JPG/PNG/WebP y limite de 10 MB en el editor.
+- [x] Implementar portada, orden, preview y eliminacion.
+- [x] Persistir metadatos en `listing_images` y limpiar el archivo de Storage al eliminar cuando la URL pertenece al bucket.
+- [ ] Reemplazar imagenes Unsplash por contenido real o placeholders explicitos. [F06]
+- [ ] Limpiar archivos huerfanos. [F06]
 
 ## Sprint 6 - Admin MVP
 
-- [ ] Reemplazar Admin demo por shell autenticada.
-- [ ] Mostrar metricas reales desde Supabase.
-- [ ] Crear listado con busqueda, filtros y acciones.
-- [ ] Crear alta/edicion de publicaciones.
-- [ ] Crear editor de unidades y tipologias.
-- [ ] Integrar editor de imagenes.
-- [ ] Validar slug, campos requeridos, precios y estados.
-- [ ] Implementar guardar borrador, preview y publicar.
-- [ ] Migrar WhatsApp de `localStorage` a `site_settings`.
-- [ ] Eliminar fallbacks hardcodeados y agregar logout.
+- [x] Reemplazar Admin demo por shell autenticada.
+- [x] Mostrar metricas reales desde Supabase.
+- [x] Crear listado base con acciones de editar, publicar, pausar y eliminar.
+- [x] Crear alta/edicion de publicaciones principales.
+- [x] Crear editor de unidades y tipologias: `ListingTypologiesEditor.tsx` + `adminListingTypologiesApi.ts` (CRUD), integrado en `AdminPublications.tsx` junto al editor de imagenes.
+- [x] Integrar editor de imagenes: carga a Storage, portada, orden, preview y eliminacion.
+- [x] Validar slug, campos requeridos, precios, estados y coordenadas: agregados los campos Latitud/Longitud al formulario (antes no existian en el UI); `validate()` en `AdminPublications.tsx` chequea titulo, slug no vacio (via `slugify` exportado de `listingsApi.ts`), ciudad obligatoria, precio >= 0, moneda 3-4 caracteres, `price_from` requiere precio cargado, y latitud/longitud en rango y cargadas juntas (o ninguna).
+- [x] Agregar checklist de "Servicios" al formulario: la columna `services` y la constante `ALL_SERVICES` (`listings.ts`) ya existian pero no habia ningun input en `AdminPublications.tsx` para editarla.
+- [x] Agregar "Caracteristicas" (dormitorios, banos, cocheras, ambientes, superficie_m2, tipo_propiedad, financiacion, apto credito) al formulario de Admin. Ejecutado en Supabase (confirmado via `information_schema`): `surface_m2, bedrooms, bathrooms, garages, rooms, property_type, financing_details` agregadas a `listings`. `mapListing` usa `financing_details` como texto de `financiamiento` (fallback a "Financiación disponible" si solo esta tildado `financing`). Formulario: "Superficie m²" y "Detalle de financiación" siempre visibles; dormitorios/banos/cocheras/ambientes/tipo de propiedad/apto credito solo cuando `type === 'propiedad'`.
+- [x] Ejecutar `20260924001000_add_mortgage_eligible.sql` en Supabase: confirmado via `information_schema` que `mortgage_eligible boolean default false` ya esta en `listings`. Schema real y codigo alineados.
+- [x] Implementar guardar borrador, preview y publicar. Preview mejorado (2026-09-24): "Previsualizar" en `AdminPublications.tsx` renderiza el componente real `Detail.tsx` (con imagenes y tipologias reales, vía `toPreviewListing()`). Guardar borrador/publicar ya funcionaba end-to-end via `Estado de publicación` (borrador/publicado/pausado) + botones "Publicar"/"Pausar" en la lista y en el toolbar de edicion — confirmado funcionando por el usuario.
+- [x] Migrar WhatsApp de `localStorage` a `site_settings` (2026-09-25). `src/data/siteSettingsApi.ts` (`getWAConfig`/`saveWAConfig`, fila unica; en prod `id` es uuid, ver SKILL.md); `App.tsx` lo carga al montar; Admin guarda en Supabase con estado de guardado/error. `20260925000000_site_settings_public_read.sql` ya corrida en Supabase (policy "Public can read site settings" confirmada via `pg_policies`). Numero real e Instagram guardados desde Admin y probados en el sitio publico por el usuario. [F02]
+- [x] Eliminar fallbacks hardcodeados y agregar logout. Logout ya existia; se sacaron todos los `wa.me/5493515000000` del frontend (cards, Lands, Home, Footer) y `DEFAULT_CONFIG.number` quedo vacio. `waConfig` ahora es obligatorio en las cards. [F02]
+- [x] Instagram conectado a `site_settings.instagram_url` (2026-09-25): campo `instagramUrl` en `WAConfig`, editable en Admin > WhatsApp (valida URL de perfil), usado en Footer y Contacto; el `@usuario` visible se deriva de la URL (`instagramHandle`).
+- [x] Probar el CRUD completo en navegador con una sesión admin real: crear, editar, eliminar y agregar imágenes funcionan.
+- [x] Agregar filtros al listado de Publicaciones en Admin (busqueda, tipo, operacion, estado de publicacion, estado comercial, ciudad, barrio, tipo de propiedad, servicio, precio "desde", financiacion, apto credito) y hacer clickeables las metricas del Dashboard para ir a Publicaciones con ese filtro aplicado. Sidebar de Admin ahora es colapsable (boton « / » junto al logo). Detalle en SKILL.md seccion 15.
+
+> Causa del error "new row violates row-level security policy": a `listings` y `listing_images` les faltaba una policy de SELECT para admin (solo existía la pública, limitada a `publication_status = 'publicado'`). El INSERT pasaba pero el `RETURNING` de `.select().single()` no encontraba policy que lo cubriera en estado `borrador`. Ya resuelto: `supabase/migrations/20260921001000_rls_policies.sql` fue reescrito y refleja el estado real de Supabase (ver SKILL.md, sección 15).
 
 ## Sprint 7 - Calidad y produccion
 
-- [ ] Tests unitarios de reglas de negocio y WhatsApp.
-- [ ] Tests de login, CRUD, Storage y RLS.
-- [ ] Configurar lint, typecheck, test y build en GitHub Actions.
-- [ ] Configurar Vercel y variables por ambiente.
-- [ ] Revisar SEO, sitemap y metadata.
-- [ ] Revisar accesibilidad y responsive.
-- [ ] Optimizar imagenes, carga, cache y paginacion.
+- [ ] Tests unitarios de reglas de negocio y WhatsApp. [F08]
+- [ ] Tests de login, CRUD, Storage y RLS. [F08]
+- [ ] Configurar lint, typecheck, test y build en GitHub Actions. [F08]
+- [ ] Configurar Vercel y variables por ambiente. [F09] Incluir `vercel.json` con rewrite catch-all a `index.html` (rutas reales con slug ya implementadas en Sprint 4, necesitan esto para no dar 404 en producción).
+- [ ] Revisar SEO, sitemap y metadata. [F03] Metadata base lista (2026-09-25): titulo, description, favicon, theme-color, OG generico y `robots.txt`. Metadata por pagina lista (2026-09-25): hook `usePageMeta` (title/description/OG/canonical/JSON-LD) aplicado en Home, Properties, Lands, Projects, Contact y Detail (titulo dinamico "Publicacion · Precio | ORIGEN", descripcion real, `og:image` de portada, JSON-LD `RealEstateListing`+`Offer`). Bloqueado hasta tener Vercel + dominio (F09): previews de WhatsApp/Facebook por publicacion (requiere funcion server-side, los bots no ejecutan JS) y `sitemap.xml` dinamico — ambos anotados en spec F03 como dependientes de F09.
+- [x] Eliminar rastros de Figma Make (2026-09-25): se borro `.figma/`, los plugins de `vite.config.ts`, los slots `<!-- figma:* -->` de `index.html` y las entradas de `.gitignore`. `src/imports/` se reemplazo por `src/assets/logo-origen.png` (logo) y `.codex/referencias/` (capturas y briefs originales). AGENTS.md y README actualizados.
+- [ ] Revisar accesibilidad y responsive. (sin spec todavia)
+- [ ] Optimizar imagenes, carga, cache y paginacion. Cache de `getPublicListings` en memoria + prefetch de PROPIEDAD/TERRENO/EMPRENDIMIENTO al bootear la app ya implementado (`listingsApi.ts`, `App.tsx`) el 2026-09-24: navegar entre Home/Properties/Lands/Projects/Detail ya no vuelve a pedir datos a Supabase, se sirve del cache. Falta: optimizar imagenes (siguen siendo URLs de Unsplash sin resize/lazy) y paginacion real (no aplica todavia con el catalogo chico actual). Hallazgo: el logo es un PNG de 320 KB. [F07]
+- [ ] Dividir el bundle principal con imports dinamicos/code splitting y volver a medir el peso de produccion. Hoy: 1 JS de 538 KB con el Admin incluido. [F07]
+- [ ] Normalizar la codificacion UTF-8 de textos y verificar caracteres acentuados en el navegador. No se encontro mojibake en `.ts/.tsx` (2026-09-25); queda solo la verificacion visual. [F08]
 - [ ] Auditar secretos, URLs hardcodeadas y contenido demo.
-- [ ] Documentar operacion, migraciones y rollback.
-- [ ] Ejecutar smoke test desktop/mobile en preview.
+- [ ] Documentar operacion, migraciones y rollback. [F09]
+- [ ] Ejecutar smoke test desktop/mobile en preview. [F09]
+
+## Sprint 8 - Mejoras de ficha
+
+- [x] Correccion: en el detalle de las propiedades no se renderizan las caracteristicas. Confirmado en navegador tras agregar columnas y mapeo (ver Sprint 6).
+- [x] Repaso de mensajes de WhatsApp (2026-09-25): se encontraron 3 mensajes mal armados. Home/Contact usaban `propertyMsg` con nombre="Consulta general" (quedaba "quiero consultar por la propiedad Consulta general"); Lands CTA usaba `landMsg` con nombre="terreno" (quedaba "el terreno terreno"); las tipologias de propiedades/emprendimientos no armaban mensaje con el nombre de la unidad (solo terrenos lo hacian para sus lotes). Fix: nuevo helper `buildWAMessageUrl()` en `utils/whatsapp.ts` para mensajes fuera de las 3 plantillas configurables; textos nuevos en `content/texts.ts` (`common.generalInquiryMessage`, `lands.whatsappInquiryMessage`, `detail.typologyWhatsappMessage`).
+- [x] Agregar "En negociación" como opcion de Estado comercial en Admin (2026-09-25): el tipo publico `EstadoComercial` y `Detail.tsx` ya lo soportaban, pero el select de creacion/edicion y el de filtros en `AdminPublications.tsx` no tenian la opcion, ni el tipo `AdminListingInput['commercial_status']`. Al agregarla aparecio otro caso de divergencia DB-vs-repo: el check constraint real en Supabase (`listings_commercial_status_check`) solo permitia disponible/reservado/vendido/alquilado, aunque `initial_schema.sql` en el repo ya decia que incluia `en_negociacion`. Fix ejecutado en Supabase con migracion nueva `20260925001000_add_en_negociacion_status.sql` (drop + recreate del constraint).
+- [ ] Agregar boton de compartir en la ficha (Web Share API con fallback a copiar link / WhatsApp). [F04]
+- [ ] Agregar seccion para video de YouTube en la ficha (campo de URL en Admin + embed responsive). [F10]
+- [ ] Investigar y elegir libreria para cargar planos 3D navegables (evaluar Matterport embed, three.js/react-three-fiber, model-viewer, Pannellum para 360) e integrarla en la ficha. [F12]
+- [x] Auditoria de campos de `listings` faltantes en `Detail.tsx` (2026-09-25): faltaban `operation` (venta/alquiler, se cargaba en Admin pero `mapListing` nunca lo pasaba al tipo publico `Listing`) y el badge de estado "Alquilado". Fix: nuevo campo `operacion: 'VENTA'|'ALQUILER'` en `Listing`/`mapListing`, mostrado en el eyebrow de ubicacion de `Detail.tsx` ("Venta · Barrio · Ciudad"). De paso se encontro que `EstadoComercial` no incluia `'ALQUILADO'` y `mapCommercialStatus` lo hacia caer a "Disponible" por defecto — una publicacion marcada Alquilado se mostraba como disponible sin ningun badge. Decision del usuario: mostrarla igual, con badge "Alquilado" (no ocultarla como a Vendido). Agregado `ALQUILADO` al tipo y a los badges de `Detail.tsx`, `PropertyCard`, `LandCard`, `ProjectCard`. Pendiente (no bloqueante): `whatsapp_enabled`/`whatsapp_message` existen en la tabla y en `AdminListingInput` pero no tienen campo en el formulario de Admin ni se mapean al tipo publico — columnas muertas hoy.
+- [x] "Vendido" ya no oculta la publicacion (2026-09-25): decision del usuario, antes `isPubliclyVisible()` y el fetch publico excluian `commercial_status = 'vendido'` por completo (no aparecia ni en catalogo ni en detalle). Ahora solo se filtra por `publication_status = 'publicado'`; "Vendido" se muestra como badge igual que Reservado/En negociacion/Alquilado. Requirio actualizar 3 policies RLS en Supabase ("Public can read visible listings", "...typologies...", "...images...") que tambien excluian vendido — reflejado en `supabase/migrations/20260921001000_rls_policies.sql`, pendiente confirmar que se corrio en la base real. Nota pendiente sin resolver: el CTA "Consultar por WhatsApp" a nivel publicacion sigue activo aunque este vendida (los lotes/tipologias individuales vendidos si ocultan su boton).
+- [x] Bug real: las imagenes no se renderizaban en el catalogo (Propiedades/Terrenos/Emprendimientos). `PropertyCard`/`LandCard`/`ProjectCard` armaban la URL con `&w=600...` asumiendo que `listing.imagen` ya tenia un `?` (cierto para las demo de Unsplash, falso para las imagenes reales subidas a Supabase Storage, que no tienen query string) — el `&` sin `?` previo rompe la URL (404). `Detail.tsx` ya usaba `?` correctamente. Cambiado `&` por `?` en los 3 cards para que coincida.
+- [x] Deslizador de imagenes en las cards del catalogo (2026-09-25): nuevo componente compartido `ListingImageSlider.tsx` (flechas al hover + contador "1/N", `stopPropagation` para no disparar la navegacion a la ficha) integrado en `PropertyCard`, `LandCard` y `ProjectCard`, mostrando todas las `imagenes` de la publicacion en vez de solo la portada. Land/Project tenian un degradado decorativo encima de la imagen que tapaba los clicks de las flechas — se le agrego `pointer-events: none`.
 
 ## Fuera del MVP
 
@@ -111,3 +156,4 @@
 - Favoritos.
 - Integracion automatica con Zonaprop.
 - Edicion colaborativa en tiempo real.
+- Reemplazar los `<select>` nativos del panel Admin por un dropdown propio con estilos consistentes (el popup nativo del navegador no se puede restylear del todo: fondo blanco y resaltado de la opcion seleccionada son "chrome" del SO, no CSS).

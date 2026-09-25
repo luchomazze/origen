@@ -1,4 +1,5 @@
-import logoSrc from '../imports/00_guia_identidad_ORIGEN.png'
+import logoSrc from '../assets/logo-origen.png'
+import { TEXTS } from '../content/texts'
 
 interface Props {
   size?: 'sm' | 'md'
@@ -12,7 +13,7 @@ export default function Logo({ size = 'md', onLight = false }: Props) {
   return (
     <img
       src={logoSrc}
-      alt="ORIGEN Inversiones Inmobiliarias"
+      alt={TEXTS.brand.logoAlt}
       style={{
         height: `${height}px`,
         width: 'auto',

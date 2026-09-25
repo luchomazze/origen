@@ -1,27 +1,43 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { NavProps } from '../types'
 import type { TipoListing, Listing } from '../data/listings'
-import { DEMO_LISTINGS, displayPrecio, displayUnidadPrecio, isPubliclyVisible } from '../data/listings'
-import { buildWAUrl, resolveMsg } from '../utils/whatsapp'
+import { displayPrecio, displayUnidadPrecio, isPubliclyVisible } from '../data/listings'
+import { getPublicListings } from '../data/listingsApi'
+import { buildWAMessageUrl, buildWAUrl, resolveMsg } from '../utils/whatsapp'
+import { usePageMeta } from '../hooks/usePageMeta'
+import { buildPath } from '../utils/routing'
 import PropertyCard from '../components/PropertyCard'
 import LandCard from '../components/LandCard'
 import ProjectCard from '../components/ProjectCard'
+import { TEXTS } from '../content/texts'
 
 interface Props extends NavProps {
   slug: string
   tipo: TipoListing
+  previewListing?: Listing
 }
 
-const TIPO_LABEL: Record<string, string> = {
-  CASA: 'Casa', DEPARTAMENTO: 'Departamento', PH: 'PH', LOCAL: 'Local',
-  OFICINA: 'Oficina', CAMPO: 'Campo', CABAÑA: 'Cabaña', OTRO: 'Otro',
-}
+const DETAIL_PAGE = {
+  PROPIEDAD: 'property-detail',
+  TERRENO: 'land-detail',
+  EMPRENDIMIENTO: 'project-detail',
+} as const
+
+const TIPO_LABEL = TEXTS.propertyTypes
 
 const UNIDAD_ESTADO: Record<string, { color: string; label: string }> = {
-  DISPONIBLE: { color: '#B88E3A', label: 'Disponible' },
-  RESERVADO: { color: '#DCC8A3', label: 'Reservado' },
-  EN_NEGOCIACION: { color: '#5C636B', label: 'En negociación' },
-  VENDIDO: { color: 'rgba(92,99,107,0.4)', label: 'Vendido' },
+  DISPONIBLE: { color: '#B88E3A', label: TEXTS.commercialStatus.available },
+  RESERVADO: { color: '#DCC8A3', label: TEXTS.commercialStatus.reserved },
+  EN_NEGOCIACION: { color: '#5C636B', label: TEXTS.commercialStatus.inNegotiation },
+  VENDIDO: { color: 'rgba(92,99,107,0.4)', label: TEXTS.commercialStatus.sold },
+  ALQUILADO: { color: 'rgba(92,99,107,0.4)', label: TEXTS.commercialStatus.rented },
+}
+
+const LISTING_BADGE: Record<string, { color: string; border: string; label: string }> = {
+  RESERVADO: { color: '#B88E3A', border: 'rgba(184,142,58,0.4)', label: TEXTS.commercialStatus.reserved },
+  EN_NEGOCIACION: { color: '#5C636B', border: 'rgba(92,99,107,0.3)', label: TEXTS.commercialStatus.inNegotiation },
+  ALQUILADO: { color: '#5C636B', border: 'rgba(92,99,107,0.3)', label: TEXTS.commercialStatus.rented },
+  VENDIDO: { color: '#5C636B', border: 'rgba(92,99,107,0.3)', label: TEXTS.commercialStatus.sold },
 }
 
 const WA_ICON = (
@@ -33,18 +49,18 @@ const WA_ICON = (
 function getChars(l: Listing) {
   const rows: { label: string; value: string }[] = []
   if (l.tipo === 'PROPIEDAD') {
-    if (l.tipo_propiedad) rows.push({ label: 'Tipo', value: TIPO_LABEL[l.tipo_propiedad] ?? l.tipo_propiedad })
-    if (l.superficie_m2) rows.push({ label: 'Superficie', value: `${l.superficie_m2} m²` })
-    if (l.ambientes) rows.push({ label: 'Ambientes', value: String(l.ambientes) })
-    if (l.dormitorios) rows.push({ label: 'Dormitorios', value: String(l.dormitorios) })
-    if (l.banos) rows.push({ label: 'Baños', value: String(l.banos) })
-    if (l.cocheras) rows.push({ label: 'Cocheras', value: String(l.cocheras) })
-    if (l.apto_credito) rows.push({ label: 'Apto crédito', value: 'Sí' })
+    if (l.tipo_propiedad) rows.push({ label: TEXTS.detail.characteristicType, value: TIPO_LABEL[l.tipo_propiedad] ?? l.tipo_propiedad })
+    if (l.superficie_m2) rows.push({ label: TEXTS.detail.characteristicSurface, value: TEXTS.units.squareMeters(l.superficie_m2) })
+    if (l.ambientes) rows.push({ label: TEXTS.detail.characteristicRooms, value: String(l.ambientes) })
+    if (l.dormitorios) rows.push({ label: TEXTS.detail.characteristicBedrooms, value: String(l.dormitorios) })
+    if (l.banos) rows.push({ label: TEXTS.detail.characteristicBathrooms, value: String(l.banos) })
+    if (l.cocheras) rows.push({ label: TEXTS.detail.characteristicGarages, value: String(l.cocheras) })
+    if (l.apto_credito) rows.push({ label: TEXTS.detail.characteristicMortgage, value: TEXTS.common.yes })
   } else if (l.tipo === 'TERRENO') {
-    if (l.superficie_m2) rows.push({ label: 'Superficie', value: `${l.superficie_m2} m²` })
+    if (l.superficie_m2) rows.push({ label: TEXTS.detail.characteristicSurface, value: TEXTS.units.squareMeters(l.superficie_m2) })
   } else {
-    if (l.superficie_m2) rows.push({ label: 'Superficie', value: `${l.superficie_m2} m²` })
-    if (l.fecha_entrega) rows.push({ label: 'Entrega', value: l.fecha_entrega })
+    if (l.superficie_m2) rows.push({ label: TEXTS.detail.characteristicSurface, value: TEXTS.units.squareMeters(l.superficie_m2) })
+    if (l.fecha_entrega) rows.push({ label: TEXTS.detail.characteristicDelivery, value: l.fecha_entrega })
   }
   return rows
 }
@@ -58,24 +74,100 @@ const SectionLabel = ({ text }: { text: string }) => (
   </>
 )
 
-export default function Detail({ slug, tipo, navigate, waConfig }: Props) {
-  const listing = DEMO_LISTINGS.find(l => l.slug === slug && l.tipo === tipo)
+export default function Detail({ slug, tipo, navigate, waConfig, previewListing }: Props) {
+  const [listing, setListing] = useState<Listing | null>(previewListing ?? null)
+  const [relatedListings, setRelatedListings] = useState<Listing[]>([])
+  const [loading, setLoading] = useState(!previewListing)
+  const [error, setError] = useState<string | null>(null)
   const [activeImg, setActiveImg] = useState(0)
 
+  useEffect(() => {
+    setActiveImg(0)
+
+    if (previewListing) {
+      setListing(previewListing)
+      setLoading(false)
+      setError(null)
+      return
+    }
+
+    let active = true
+    setLoading(true)
+    setError(null)
+
+    getPublicListings(tipo)
+      .then(listings => {
+        if (!active) return
+        setListing(listings.find(l => l.slug === slug) ?? null)
+        setRelatedListings(listings)
+      })
+      .catch(reason => {
+        if (active) setError(reason instanceof Error ? reason.message : TEXTS.detail.loadError)
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [slug, tipo, previewListing])
+
+  const metaPrecio = listing ? displayPrecio(listing) : null
+  const metaTitle = listing ? `${listing.titulo}${metaPrecio ? ` · ${metaPrecio}` : ''} | ORIGEN` : 'ORIGEN · Inversiones Inmobiliarias'
+  const metaDescription = listing?.descripcion || [listing?.barrio, listing?.ciudad].filter(Boolean).join(', ') || TEXTS.home.heroSubtitle
+  const metaJsonLd = listing ? {
+    '@context': 'https://schema.org',
+    '@type': 'RealEstateListing',
+    name: listing.titulo,
+    description: metaDescription,
+    url: `${window.location.origin}${buildPath(DETAIL_PAGE[tipo], slug)}`,
+    ...(listing.imagen ? { image: listing.imagen } : {}),
+    ...(listing.precio != null ? {
+      offers: {
+        '@type': 'Offer',
+        price: listing.precio,
+        priceCurrency: listing.moneda ?? 'USD',
+        availability: listing.estado_comercial === 'DISPONIBLE'
+          ? 'https://schema.org/InStock'
+          : listing.estado_comercial === 'VENDIDO' || listing.estado_comercial === 'ALQUILADO'
+            ? 'https://schema.org/SoldOut'
+            : 'https://schema.org/LimitedAvailability',
+      },
+    } : {}),
+  } : undefined
+
+  usePageMeta({
+    title: metaTitle,
+    description: metaDescription,
+    path: buildPath(DETAIL_PAGE[tipo], slug),
+    image: listing?.imagen,
+    jsonLd: metaJsonLd,
+    enabled: !previewListing,
+  })
+
   const backPage = tipo === 'PROPIEDAD' ? 'properties' as const : tipo === 'TERRENO' ? 'lands' as const : 'projects' as const
-  const backLabel = tipo === 'PROPIEDAD' ? 'Propiedades' : tipo === 'TERRENO' ? 'Terrenos' : 'Emprendimientos'
-  const tipoNombre = tipo === 'PROPIEDAD' ? 'propiedad' : tipo === 'TERRENO' ? 'terreno' : 'emprendimiento'
+  const backLabel = tipo === 'PROPIEDAD' ? TEXTS.detail.backToProperties : tipo === 'TERRENO' ? TEXTS.detail.backToLands : TEXTS.detail.backToProjects
+  const tipoNombre = tipo === 'PROPIEDAD' ? TEXTS.detail.listingTypeNameProperty : tipo === 'TERRENO' ? TEXTS.detail.listingTypeNameLand : TEXTS.detail.listingTypeNameProject
   const waTemplateKey = tipo === 'PROPIEDAD' ? 'propertyMsg' as const : tipo === 'TERRENO' ? 'landMsg' as const : 'projectMsg' as const
 
-  const related = DEMO_LISTINGS
-    .filter(l => l.tipo === tipo && l.slug !== slug && isPubliclyVisible(l))
+  const related = relatedListings
+    .filter(l => l.slug !== slug && isPubliclyVisible(l))
     .sort((a, b) => (b.barrio === listing?.barrio ? 1 : 0) - (a.barrio === listing?.barrio ? 1 : 0))
     .slice(0, 3)
 
-  const relatedLabel = tipo === 'PROPIEDAD' ? 'Más propiedades' : tipo === 'TERRENO' ? 'Más terrenos' : 'Otros emprendimientos'
+  const relatedLabel = tipo === 'PROPIEDAD' ? TEXTS.detail.relatedTitleProperties : tipo === 'TERRENO' ? TEXTS.detail.relatedTitleLands : TEXTS.detail.relatedTitleProjects
+
+  if (loading) {
+    return <main style={{ paddingTop: '80px', backgroundColor: '#F5F2EC', minHeight: '100vh', padding: '160px 24px', fontFamily: "'Montserrat'", color: '#5C636B', textAlign: 'center' }}>{TEXTS.detail.loading}</main>
+  }
+
+  if (error) {
+    return <main style={{ paddingTop: '80px', backgroundColor: '#F5F2EC', minHeight: '100vh', padding: '160px 24px', fontFamily: "'Montserrat'", color: '#9B3D3D', textAlign: 'center' }}>{error}</main>
+  }
 
   // Not available
-  if (!listing || !isPubliclyVisible(listing)) {
+  if (!listing || (!previewListing && !isPubliclyVisible(listing))) {
     return (
       <main style={{ paddingTop: '80px', backgroundColor: '#F5F2EC', minHeight: '100vh' }}>
         <div style={{ backgroundColor: '#0D1B2A', padding: '72px 0 56px' }}>
@@ -88,14 +180,14 @@ export default function Detail({ slug, tipo, navigate, waConfig }: Props) {
               {backLabel}
             </button>
             <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(26px, 4vw, 42px)', fontWeight: 600, color: '#F5F2EC', lineHeight: 1.2 }}>
-              Este {tipoNombre} ya no se encuentra disponible.
+              {TEXTS.detail.notAvailableTitle(tipoNombre)}
             </h1>
           </div>
         </div>
         {related.length > 0 && (
           <div className="max-w-screen-xl mx-auto px-6 lg:px-12 py-16">
             <p style={{ fontFamily: "'Montserrat'", fontSize: '14px', color: '#5C636B', marginBottom: '36px' }}>
-              Quizás te interese alguna de estas opciones.
+              {TEXTS.detail.notAvailableSuggestion}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {related.map(r =>
@@ -111,7 +203,8 @@ export default function Detail({ slug, tipo, navigate, waConfig }: Props) {
   }
 
   const images = listing.imagenes ?? (listing.imagen ? [listing.imagen] : [])
-  const locationLabel = [listing.barrio, listing.ciudad].filter(Boolean).join(' · ')
+  const operacionLabel = listing.operacion === 'ALQUILER' ? TEXTS.operations.rent : TEXTS.operations.sale
+  const locationLabel = [operacionLabel, listing.barrio, listing.ciudad].filter(Boolean).join(' · ')
   const precio = displayPrecio(listing)
   const waUrl = buildWAUrl(waConfig, waTemplateKey, listing.titulo)
   const waMsg = resolveMsg(waConfig[waTemplateKey], listing.titulo)
@@ -204,24 +297,19 @@ export default function Detail({ slug, tipo, navigate, waConfig }: Props) {
               <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(26px, 4vw, 44px)', fontWeight: 600, color: '#0D1B2A', lineHeight: 1.15, marginBottom: '14px' }}>
                 {listing.titulo}
               </h1>
-              {listing.estado_comercial !== 'DISPONIBLE' && (
+              {LISTING_BADGE[listing.estado_comercial] && (
                 <span style={{
                   fontFamily: "'Montserrat'", fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase',
                   fontWeight: 700, display: 'inline-block', padding: '5px 12px',
-                  color: listing.estado_comercial === 'RESERVADO' ? '#B88E3A' : '#5C636B',
-                  border: `1px solid ${listing.estado_comercial === 'RESERVADO' ? 'rgba(184,142,58,0.4)' : 'rgba(92,99,107,0.3)'}`,
+                  color: LISTING_BADGE[listing.estado_comercial].color,
+                  border: `1px solid ${LISTING_BADGE[listing.estado_comercial].border}`,
                 }}>
-                  {listing.estado_comercial === 'RESERVADO' ? 'Reservado' : 'En negociación'}
+                  {LISTING_BADGE[listing.estado_comercial].label}
                 </span>
               )}
             </div>
             {precio && (
               <div className="lg:text-right" style={{ flexShrink: 0 }}>
-                {listing.precio_desde && (
-                  <div style={{ fontFamily: "'Montserrat'", fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#5C636B', marginBottom: '4px' }}>
-                    Precio desde
-                  </div>
-                )}
                 <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(22px, 3vw, 34px)', fontWeight: 600, color: '#0D1B2A' }}>
                   {precio}
                 </div>
@@ -241,7 +329,7 @@ export default function Detail({ slug, tipo, navigate, waConfig }: Props) {
             {/* Descripción */}
             {listing.descripcion && (
               <div>
-                <SectionLabel text="Descripción" />
+                <SectionLabel text={TEXTS.detail.descriptionSection} />
                 <p style={{ fontFamily: "'Montserrat'", fontSize: '14px', color: '#5C636B', lineHeight: 1.85 }}>
                   {listing.descripcion}
                 </p>
@@ -251,7 +339,7 @@ export default function Detail({ slug, tipo, navigate, waConfig }: Props) {
             {/* Características */}
             {chars.length > 0 && (
               <div>
-                <SectionLabel text="Características" />
+                <SectionLabel text={TEXTS.detail.characteristicsSection} />
                 <div style={{ display: 'flex', flexWrap: 'wrap', margin: '-1px' }}>
                   {chars.map((c, i) => (
                     <div
@@ -273,7 +361,7 @@ export default function Detail({ slug, tipo, navigate, waConfig }: Props) {
             {/* Servicios */}
             {listing.services && listing.services.length > 0 && (
               <div>
-                <SectionLabel text="Servicios" />
+                <SectionLabel text={TEXTS.detail.servicesSection} />
                 <div style={{ display: 'flex', flexWrap: 'wrap', margin: '-1px' }}>
                   {listing.services.map(s => (
                     <div
@@ -293,7 +381,7 @@ export default function Detail({ slug, tipo, navigate, waConfig }: Props) {
             {/* Lotes disponibles — TERRENO con unidades */}
             {tipo === 'TERRENO' && hasUnidades && (
               <div>
-                <SectionLabel text="Lotes disponibles" />
+                <SectionLabel text={TEXTS.detail.availableLotsSection} />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', backgroundColor: 'rgba(13,27,42,0.08)' }}>
                   {listing.unidades!
                     .slice()
@@ -301,14 +389,14 @@ export default function Detail({ slug, tipo, navigate, waConfig }: Props) {
                     .map(u => {
                       const uEstado = UNIDAD_ESTADO[u.estado_comercial] ?? UNIDAD_ESTADO.DISPONIBLE
                       const uPrecio = displayUnidadPrecio(u)
-                      const uWaUrl = `https://wa.me/${waNum}?text=${encodeURIComponent(`Hola, quisiera consultar por el ${u.nombre} de ${listing.titulo}.`)}`
+                      const uWaUrl = `https://wa.me/${waNum}?text=${encodeURIComponent(TEXTS.detail.lotWhatsappMessage(u.nombre, listing.titulo))}`
                       return (
                         <div key={u.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-5" style={{ backgroundColor: '#F5F2EC' }}>
                           <div className="flex flex-col gap-1">
                             <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '16px', color: '#0D1B2A', fontWeight: 600 }}>{u.nombre}</span>
                             <div className="flex gap-5">
                               {u.superficie_m2 && (
-                                <span style={{ fontFamily: "'Montserrat'", fontSize: '12px', color: '#5C636B' }}>{u.superficie_m2} m²</span>
+                                <span style={{ fontFamily: "'Montserrat'", fontSize: '12px', color: '#5C636B' }}>{TEXTS.units.squareMeters(u.superficie_m2)}</span>
                               )}
                               {uPrecio && (
                                 <span style={{ fontFamily: "'Montserrat'", fontSize: '12px', color: '#0D1B2A', fontWeight: 600 }}>{uPrecio}</span>
@@ -326,7 +414,7 @@ export default function Detail({ slug, tipo, navigate, waConfig }: Props) {
                                 rel="noopener noreferrer"
                                 style={{ fontFamily: "'Montserrat'", fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 600, color: '#B88E3A', border: '1px solid rgba(184,142,58,0.4)', padding: '6px 12px', textDecoration: 'none', whiteSpace: 'nowrap' }}
                               >
-                                Consultar
+                                {TEXTS.common.consult}
                               </a>
                             )}
                           </div>
@@ -338,9 +426,9 @@ export default function Detail({ slug, tipo, navigate, waConfig }: Props) {
             )}
 
             {/* Tipologías — EMPRENDIMIENTO con unidades */}
-            {tipo === 'EMPRENDIMIENTO' && hasUnidades && (
+            {(tipo === 'EMPRENDIMIENTO' || tipo === 'PROPIEDAD') && hasUnidades && (
               <div>
-                <SectionLabel text="Tipologías disponibles" />
+                <SectionLabel text={TEXTS.detail.typologiesSection} />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {listing.unidades!
                     .slice()
@@ -348,6 +436,7 @@ export default function Detail({ slug, tipo, navigate, waConfig }: Props) {
                     .map(u => {
                       const uEstado = UNIDAD_ESTADO[u.estado_comercial] ?? UNIDAD_ESTADO.DISPONIBLE
                       const uPrecio = displayUnidadPrecio(u)
+                      const uWaUrl = buildWAMessageUrl(waConfig, TEXTS.detail.typologyWhatsappMessage(u.nombre, listing.titulo))
                       return (
                         <div key={u.id} style={{ border: '1px solid rgba(13,27,42,0.1)', padding: '20px' }}>
                           <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 600, color: '#0D1B2A', marginBottom: '6px' }}>{u.nombre}</div>
@@ -355,10 +444,10 @@ export default function Detail({ slug, tipo, navigate, waConfig }: Props) {
                             <p style={{ fontFamily: "'Montserrat'", fontSize: '11px', color: '#5C636B', lineHeight: 1.6, marginBottom: '10px' }}>{u.descripcion}</p>
                           )}
                           <div className="flex flex-wrap gap-x-4 gap-y-1" style={{ marginBottom: '40px', minHeight: '18px' }}>
-                            {u.superficie_m2 != null && <span style={{ fontFamily: "'Montserrat'", fontSize: '11px', color: '#5C636B' }}>{u.superficie_m2} m²</span>}
-                            {u.dormitorios != null && <span style={{ fontFamily: "'Montserrat'", fontSize: '11px', color: '#5C636B' }}>{u.dormitorios} dorm.</span>}
-                            {u.banos != null && <span style={{ fontFamily: "'Montserrat'", fontSize: '11px', color: '#5C636B' }}>{u.banos} {u.banos === 1 ? 'baño' : 'baños'}</span>}
-                            {u.cocheras != null && <span style={{ fontFamily: "'Montserrat'", fontSize: '11px', color: '#5C636B' }}>{u.cocheras} cochera{u.cocheras > 1 ? 's' : ''}</span>}
+                            {u.superficie_m2 != null && <span style={{ fontFamily: "'Montserrat'", fontSize: '11px', color: '#5C636B' }}>{TEXTS.units.squareMeters(u.superficie_m2)}</span>}
+                            {u.dormitorios != null && <span style={{ fontFamily: "'Montserrat'", fontSize: '11px', color: '#5C636B' }}>{TEXTS.units.bedroomsShort(u.dormitorios)}</span>}
+                            {u.banos != null && <span style={{ fontFamily: "'Montserrat'", fontSize: '11px', color: '#5C636B' }}>{TEXTS.units.bathrooms(u.banos)}</span>}
+                            {u.cocheras != null && <span style={{ fontFamily: "'Montserrat'", fontSize: '11px', color: '#5C636B' }}>{TEXTS.units.garages(u.cocheras)}</span>}
                           </div>
                           <div style={{ borderTop: '1px solid rgba(13,27,42,0.08)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                             <div>
@@ -369,12 +458,12 @@ export default function Detail({ slug, tipo, navigate, waConfig }: Props) {
                             </div>
                             {u.estado_comercial !== 'VENDIDO' && (
                               <a
-                                href={waUrl}
+                                href={uWaUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 style={{ fontFamily: "'Montserrat'", fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 600, color: '#B88E3A', border: '1px solid rgba(184,142,58,0.4)', padding: '7px 12px', textDecoration: 'none' }}
                               >
-                                Consultar
+                                {TEXTS.common.consult}
                               </a>
                             )}
                           </div>
@@ -388,7 +477,7 @@ export default function Detail({ slug, tipo, navigate, waConfig }: Props) {
             {/* Financiamiento — EMPRENDIMIENTO */}
             {tipo === 'EMPRENDIMIENTO' && listing.financiamiento && (
               <div>
-                <SectionLabel text="Financiación" />
+                <SectionLabel text={TEXTS.detail.financingSection} />
                 <div style={{ backgroundColor: '#0D1B2A', padding: '22px 24px', borderLeft: '3px solid #B88E3A' }}>
                   <p style={{ fontFamily: "'Montserrat'", fontSize: '13px', color: 'rgba(245,242,236,0.7)', lineHeight: 1.75 }}>
                     {listing.financiamiento}
@@ -400,7 +489,7 @@ export default function Detail({ slug, tipo, navigate, waConfig }: Props) {
             {/* Ubicación */}
             {(listing.barrio || listing.ciudad || listing.direccion || (listing.latitud && listing.longitud)) && (
               <div>
-                <SectionLabel text="Ubicación" />
+                <SectionLabel text={TEXTS.detail.locationSection} />
                 <div style={{ fontFamily: "'Montserrat'", fontSize: '14px', color: '#5C636B', lineHeight: 1.7, marginBottom: (listing.latitud && listing.longitud) ? '16px' : 0 }}>
                   {[listing.barrio, listing.ciudad].filter(Boolean).join(', ')}
                   {listing.direccion && (
@@ -410,7 +499,7 @@ export default function Detail({ slug, tipo, navigate, waConfig }: Props) {
                 {listing.latitud && listing.longitud && (
                   <div style={{ overflow: 'hidden', border: '1px solid rgba(13,27,42,0.1)' }}>
                     <iframe
-                      title="Mapa de ubicación"
+                      title={TEXTS.detail.mapTitle}
                       src={`https://www.openstreetmap.org/export/embed.html?bbox=${listing.longitud - 0.009},${listing.latitud - 0.006},${listing.longitud + 0.009},${listing.latitud + 0.006}&layer=mapnik&marker=${listing.latitud},${listing.longitud}`}
                       style={{ width: '100%', height: '260px', border: 'none', display: 'block' }}
                       loading="lazy"
@@ -421,7 +510,7 @@ export default function Detail({ slug, tipo, navigate, waConfig }: Props) {
                       rel="noopener noreferrer"
                       style={{ display: 'block', padding: '10px 16px', fontFamily: "'Montserrat'", fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#5C636B', textDecoration: 'none', borderTop: '1px solid rgba(13,27,42,0.08)' }}
                     >
-                      Abrir en Google Maps →
+                      {TEXTS.detail.openInGoogleMaps}
                     </a>
                   </div>
                 )}
@@ -441,7 +530,7 @@ export default function Detail({ slug, tipo, navigate, waConfig }: Props) {
               {precio && (
                 <div>
                   <div style={{ fontFamily: "'Montserrat'", fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(245,242,236,0.4)', marginBottom: '4px' }}>
-                    {listing.precio_desde ? 'Precio desde' : 'Precio'}
+                    {TEXTS.detail.priceLabel}
                   </div>
                   <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', color: '#F5F2EC', fontWeight: 600 }}>
                     {precio}
@@ -461,7 +550,7 @@ export default function Detail({ slug, tipo, navigate, waConfig }: Props) {
                 onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#B88E3A' }}
               >
                 {WA_ICON}
-                Consultar por WhatsApp
+                {TEXTS.common.consultByWhatsapp}
               </a>
               {listing.url_zonaprop && (
                 <a
@@ -472,7 +561,7 @@ export default function Detail({ slug, tipo, navigate, waConfig }: Props) {
                   onMouseEnter={e => { e.currentTarget.style.color = 'rgba(245,242,236,0.6)' }}
                   onMouseLeave={e => { e.currentTarget.style.color = 'rgba(245,242,236,0.35)' }}
                 >
-                  Ver en ZonaProp →
+                  {TEXTS.detail.viewOnZonaprop}
                 </a>
               )}
             </div>
@@ -485,7 +574,7 @@ export default function Detail({ slug, tipo, navigate, waConfig }: Props) {
         <div style={{ borderTop: '1px solid rgba(13,27,42,0.08)', padding: '80px 0' }}>
           <div className="max-w-screen-xl mx-auto px-6 lg:px-12">
             <div style={{ fontFamily: "'Montserrat'", fontSize: '9px', letterSpacing: '0.25em', textTransform: 'uppercase', color: '#B88E3A', fontWeight: 500, marginBottom: '8px' }}>
-              También puede interesarte
+              {TEXTS.detail.relatedEyebrow}
             </div>
             <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '28px', fontWeight: 600, color: '#0D1B2A', marginBottom: '36px' }}>
               {relatedLabel}
@@ -501,9 +590,9 @@ export default function Detail({ slug, tipo, navigate, waConfig }: Props) {
         </div>
       )}
 
-      {/* Mobile sticky WA */}
+      {/* Mobile sticky WA: sticky (not fixed) so it stops at the end of <main>, above the footer */}
       <div
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 p-4"
+        className="lg:hidden sticky bottom-0 z-40 p-4"
         style={{ backgroundColor: '#0D1B2A', borderTop: '1px solid rgba(245,242,236,0.08)' }}
       >
         <a
@@ -514,7 +603,7 @@ export default function Detail({ slug, tipo, navigate, waConfig }: Props) {
           style={{ fontFamily: "'Montserrat'", fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, color: '#0D1B2A', backgroundColor: '#B88E3A', padding: '14px', textDecoration: 'none' }}
         >
           {WA_ICON}
-          Consultar por WhatsApp
+          {TEXTS.common.consultByWhatsapp}
         </a>
       </div>
 

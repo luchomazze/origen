@@ -1,3 +1,4 @@
+import { TEXTS } from '../content/texts'
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
@@ -14,7 +15,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Ocurrió un error inesperado.'
+  return error instanceof Error ? error.message : TEXTS.common.unexpectedError
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -48,10 +49,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     user: session?.user ?? null,
     loading,
-    configurationError: supabase ? null : 'Supabase todavía no está configurado. Copiá .env.example a .env y agregá las credenciales del proyecto.',
+    configurationError: supabase ? null : TEXTS.auth.supabaseNotConfiguredLong,
     signIn: async (email, password) => {
       if (!supabase) {
-        return { error: 'Supabase todavía no está configurado.' }
+        return { error: TEXTS.auth.supabaseNotConfiguredShort }
       }
 
       const { error } = await supabase.auth.signInWithPassword({ email, password })
