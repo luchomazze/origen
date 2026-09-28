@@ -4,6 +4,7 @@ import Logo from '../components/Logo'
 import AdminDashboard from '../components/admin/AdminDashboard'
 import AdminPublications, { EMPTY_FILTERS, type AdminListingFilters } from '../components/admin/AdminPublications'
 import { useAuth } from '../auth/AuthProvider'
+import { readZonapropImportFromHash } from '../data/zonapropImport'
 import { buildWAUrl, instagramHandle, resolveMsg } from '../utils/whatsapp'
 import type { NavProps } from '../types'
 import type { WAConfig } from '../utils/whatsapp'
@@ -15,7 +16,8 @@ const FIELD_INPUT = { fontFamily: "'Montserrat'", fontSize: '13px', color: '#F5F
 
 export default function Admin({ navigate, waConfig, onConfigSave }: NavProps) {
   const { user, signOut } = useAuth()
-  const [section, setSection] = useState<AdminSection>('dashboard')
+  const [zonapropImport, setZonapropImport] = useState(readZonapropImportFromHash)
+  const [section, setSection] = useState<AdminSection>(zonapropImport ? 'publicaciones' : 'dashboard')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [publicationsFilter, setPublicationsFilter] = useState<Partial<AdminListingFilters>>(EMPTY_FILTERS)
   const [draft, setDraft] = useState<WAConfig>({ ...waConfig })
@@ -26,6 +28,11 @@ export default function Admin({ navigate, waConfig, onConfigSave }: NavProps) {
   useEffect(() => {
     setDraft({ ...waConfig })
   }, [waConfig])
+
+  // Limpia el hash de la importación de Zonaprop para que recargar no vuelva a importar.
+  useEffect(() => {
+    if (zonapropImport) window.history.replaceState(window.history.state, '', window.location.pathname)
+  }, [zonapropImport])
   const testProject = TEXTS.admin.whatsappSettings.sampleProjectName
   const previewProject = resolveMsg(draft.projectMsg, testProject)
   const previewProperty = resolveMsg(draft.propertyMsg, TEXTS.admin.whatsappSettings.samplePropertyName)
@@ -54,13 +61,16 @@ export default function Admin({ navigate, waConfig, onConfigSave }: NavProps) {
     }
   }
 
+  // La importación de Zonaprop se usa solo en el primer montaje de Publicaciones; al navegar se descarta.
   const goToSection = (id: AdminSection) => {
     if (id === 'publicaciones') setPublicationsFilter(EMPTY_FILTERS)
+    setZonapropImport(undefined)
     setSection(id)
   }
 
   const goToPublicationsFiltered = (filters: Partial<AdminListingFilters>) => {
     setPublicationsFilter(filters)
+    setZonapropImport(undefined)
     setSection('publicaciones')
   }
 
@@ -102,7 +112,7 @@ export default function Admin({ navigate, waConfig, onConfigSave }: NavProps) {
 
         <div style={{ padding: '40px 32px', maxWidth: '1100px' }}>
           {section === 'dashboard' && <AdminDashboard onSelectFilter={goToPublicationsFiltered} />}
-          {section === 'publicaciones' && <AdminPublications waConfig={waConfig} navigate={navigate} initialFilters={publicationsFilter} />}
+          {section === 'publicaciones' && <AdminPublications waConfig={waConfig} navigate={navigate} initialFilters={publicationsFilter} initialImport={zonapropImport} />}
           {section === 'whatsapp' && (
             <div>
               <div className="flex items-center justify-between mb-8"><div><h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '28px', fontWeight: 600, color: '#F5F2EC', marginBottom: '6px' }}>{TEXTS.admin.whatsappSettings.title}</h1><p style={{ fontSize: '13px', color: 'rgba(245,242,236,0.4)' }}>{TEXTS.admin.whatsappSettings.subtitle}</p></div>{saved && <span style={{ color: '#B88E3A', fontSize: '11px' }}>{TEXTS.admin.whatsappSettings.savedNotice}</span>}</div>

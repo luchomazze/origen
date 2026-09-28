@@ -501,6 +501,16 @@ export const TEXTS = {
         clearButton: 'Limpiar filtros',
       },
 
+      table: {
+        title: 'Título',
+        type: 'Tipo',
+        location: 'Ubicación',
+        price: 'Precio',
+        publicationStatus: 'Publicación',
+        commercialStatus: 'Estado comercial',
+        actions: 'Acciones',
+        sortBy: (column: string) => `Ordenar por ${column}`,
+      },
       resultsCount: (shown: number, total: number) => `${shown} de ${total} publicaciones`,
       loading: 'Cargando publicaciones...',
       noLocation: 'Sin ubicación',
@@ -510,6 +520,38 @@ export const TEXTS = {
       previewDialogLabel: 'Previsualización de publicación',
       previewHeader: (status: string) => `Previsualización · ${status}`,
       closePreview: 'Cerrar previsualización',
+    },
+
+    zonapropImport: {
+      title: 'Importar desde Zonaprop',
+      bookmarkletLabel: 'Importar a ORIGEN',
+      bookmarkletHint: 'Arrastrá este botón a la barra de favoritos (Ctrl+Shift+B si no la ves). Después, en una ficha de Zonaprop, hacé clic en el favorito: se abre este panel con los datos ya cargados para revisar.',
+      pasteLabel: 'Datos copiados (solo si el navegador bloqueó la ventana)',
+      pastePlaceholder: 'Si el favorito no pudo abrir el Admin, copia los datos: pegalos acá...',
+      loadButton: 'Cargar datos',
+      loaded: (pictures: number) => `Datos cargados. Revisá los campos: ${pictures} ${plural(pictures, 'foto se importará', 'fotos se importarán')} al crear la publicación, que queda como borrador.`,
+      discardButton: 'Descartar importación',
+      invalidData: 'Los datos no son una exportación válida del favorito "Importar a ORIGEN".',
+      duplicate: (title: string) => `Este aviso de Zonaprop ya fue importado como "${title}".`,
+      openExistingButton: 'Abrir publicación existente',
+      importingImages: (done: number, total: number) => `Publicación creada. Importando fotos ${done}/${total}...`,
+      imagesImported: (imported: number, failed: number) =>
+        `Publicación creada con ${imported} ${plural(imported, 'foto importada', 'fotos importadas')}.` +
+        (failed ? ` ${failed} no se ${plural(failed, 'pudo', 'pudieron')} importar; cargalas a mano desde el editor de imágenes.` : ''),
+      imageDownloadFailed: 'No se pudo descargar la foto de Zonaprop.',
+      extraLabels: {
+        expenses: 'Expensas',
+        amenities: 'Comodidades',
+        features: {
+          scubierta: 'Superficie cubierta',
+          stotal: 'Superficie total',
+          toilete: 'Toilettes',
+          antiguedad: 'Antigüedad',
+          disposicion: 'Disposición',
+          orientacion: 'Orientación',
+          luminosidad: 'Luminosidad',
+        } as Record<string, string>,
+      },
     },
 
     typologies: {

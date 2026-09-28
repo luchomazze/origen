@@ -32,6 +32,7 @@ export interface AdminListingInput {
   commercial_status: 'disponible' | 'reservado' | 'en_negociacion' | 'vendido' | 'alquilado'
   whatsapp_enabled: boolean
   whatsapp_message: string
+  zonaprop_id: string | null
 }
 
 export type AdminListing = AdminListingInput & { id: string; created_at: string; updated_at: string }
@@ -64,6 +65,7 @@ export const EMPTY_LISTING: AdminListingInput = {
   commercial_status: 'disponible',
   whatsapp_enabled: true,
   whatsapp_message: '',
+  zonaprop_id: null,
 }
 
 export async function getAdminListings(): Promise<AdminListing[]> {
@@ -133,6 +135,7 @@ export function toAdminInput(listing: AdminListing): AdminListingInput {
     commercial_status: listing.commercial_status ?? 'disponible',
     whatsapp_enabled: listing.whatsapp_enabled ?? true,
     whatsapp_message: listing.whatsapp_message ?? '',
+    zonaprop_id: listing.zonaprop_id ?? null,
   }
 }
 

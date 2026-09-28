@@ -1,5 +1,5 @@
 import { TEXTS } from '../../content/texts'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   createListing,
   deleteListing,
@@ -13,9 +13,12 @@ import {
   type AdminListingInput,
 } from '../../data/adminListingsApi'
 import { slugify } from '../../data/listingsApi'
-import { ALL_SERVICES, matchesSearchTerms } from '../../data/listings'
+import { ALL_SERVICES, formatPrecio, matchesSearchTerms } from '../../data/listings'
 import { getAdminListingTypologies, type AdminTypology } from '../../data/adminListingTypologiesApi'
 import { getListingImages, type ListingImage } from '../../data/listingImagesApi'
+import { importZonapropImages, parseZonapropExport, type ZonapropImport } from '../../data/zonapropImport'
+import { zonapropBookmarkletHref } from '../../utils/zonapropBookmarklet'
+import { buildPath } from '../../utils/routing'
 import type { WAConfig } from '../../utils/whatsapp'
 import type { Page } from '../../types'
 import Detail from '../../pages/Detail'
@@ -36,6 +39,66 @@ const DETAIL_PAGE: Record<AdminListingInput['type'], Page> = {
 export const PROPERTY_TYPE_LABELS: Record<string, string> = {
   casa: TEXTS.propertyTypes.CASA, departamento: TEXTS.propertyTypes.DEPARTAMENTO, ph: TEXTS.propertyTypes.PH, local: TEXTS.propertyTypes.LOCAL,
   oficina: TEXTS.propertyTypes.OFICINA, campo: TEXTS.propertyTypes.CAMPO, cabana: TEXTS.propertyTypes.CABAÑA, otro: TEXTS.propertyTypes.OTRO,
+}
+
+const TYPE_LABELS: Record<AdminListingInput['type'], string> = {
+  propiedad: TEXTS.listingTypes.property,
+  terreno: TEXTS.listingTypes.land,
+  emprendimiento: TEXTS.listingTypes.project,
+}
+
+const PUBLICATION_STATUS_LABELS: Record<AdminListingInput['publication_status'], string> = {
+  borrador: TEXTS.publicationStatus.draft,
+  publicado: TEXTS.publicationStatus.published,
+  pausado: TEXTS.publicationStatus.paused,
+}
+
+const PUBLICATION_STATUS_COLORS: Record<AdminListingInput['publication_status'], string> = {
+  borrador: 'rgba(245,242,236,0.55)',
+  publicado: '#B88E3A',
+  pausado: '#F0B0B0',
+}
+
+const COMMERCIAL_STATUS_LABELS: Record<AdminListingInput['commercial_status'], string> = {
+  disponible: TEXTS.commercialStatus.available,
+  reservado: TEXTS.commercialStatus.reserved,
+  en_negociacion: TEXTS.commercialStatus.inNegotiation,
+  vendido: TEXTS.commercialStatus.sold,
+  alquilado: TEXTS.commercialStatus.rented,
+}
+
+type SortKey = 'title' | 'type' | 'location' | 'price' | 'publication_status' | 'commercial_status'
+
+const TABLE_COLUMNS: { key: SortKey; label: string }[] = [
+  { key: 'title', label: TEXTS.admin.publications.table.title },
+  { key: 'type', label: TEXTS.admin.publications.table.type },
+  { key: 'location', label: TEXTS.admin.publications.table.location },
+  { key: 'price', label: TEXTS.admin.publications.table.price },
+  { key: 'publication_status', label: TEXTS.admin.publications.table.publicationStatus },
+  { key: 'commercial_status', label: TEXTS.admin.publications.table.commercialStatus },
+]
+
+const TABLE_HEADER_STYLE = { fontFamily: "'Montserrat'", fontSize: '8px', letterSpacing: '0.16em', textTransform: 'uppercase' as const, color: 'rgba(245,242,236,0.45)', fontWeight: 600, textAlign: 'left' as const, padding: '12px 14px', whiteSpace: 'nowrap' as const }
+const TABLE_CELL_STYLE = { fontFamily: "'Montserrat'", fontSize: '11px', color: 'rgba(245,242,236,0.7)', padding: '12px 14px', verticalAlign: 'middle' as const }
+const ROW_ACTION_STYLE = { fontFamily: "'Montserrat'", fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase' as const, background: 'none', padding: '6px 8px', cursor: 'pointer', whiteSpace: 'nowrap' as const }
+
+function listingLocation(listing: AdminListing): string {
+  return listing.neighborhood || listing.city || TEXTS.admin.publications.noLocation
+}
+
+function listingPrice(listing: AdminListing): string {
+  if (listing.price == null) return TEXTS.common.emptyValue
+  const price = formatPrecio(listing.price, listing.currency || 'USD')
+  return listing.price_from ? TEXTS.units.priceFrom(price) : price
+}
+
+function sortValue(listing: AdminListing, key: SortKey): string | number {
+  if (key === 'price') return listing.price ?? -1
+  if (key === 'location') return listingLocation(listing).toLowerCase()
+  if (key === 'type') return TYPE_LABELS[listing.type]
+  if (key === 'publication_status') return PUBLICATION_STATUS_LABELS[listing.publication_status]
+  if (key === 'commercial_status') return COMMERCIAL_STATUS_LABELS[listing.commercial_status]
+  return listing.title.toLowerCase()
 }
 
 export interface AdminListingFilters {
@@ -108,7 +171,7 @@ function errorMessage(reason: unknown, fallback: string): string {
   return fallback
 }
 
-export default function AdminPublications({ waConfig, navigate, initialFilters }: { waConfig: WAConfig; navigate: (to: Page, slug?: string) => void; initialFilters?: Partial<AdminListingFilters> }) {
+export default function AdminPublications({ waConfig, navigate, initialFilters, initialImport }: { waConfig: WAConfig; navigate: (to: Page, slug?: string) => void; initialFilters?: Partial<AdminListingFilters>; initialImport?: string }) {
   const [listings, setListings] = useState<AdminListing[]>([])
   const [draft, setDraft] = useState<AdminListingInput>(emptyInput)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -121,7 +184,11 @@ export default function AdminPublications({ waConfig, navigate, initialFilters }
   const [hasTypologies, setHasTypologies] = useState(false)
   const [filters, setFilters] = useState<AdminListingFilters>({ ...EMPTY_FILTERS, ...initialFilters })
   const [filtersOpen, setFiltersOpen] = useState(true)
-  const [formOpen, setFormOpen] = useState(false)
+  const [formOpen, setFormOpen] = useState(Boolean(initialImport))
+  const [importText, setImportText] = useState(initialImport ?? '')
+  const autoImportDone = useRef(false)
+  const [pendingImport, setPendingImport] = useState<ZonapropImport | null>(null)
+  const [duplicateOf, setDuplicateOf] = useState<AdminListing | null>(null)
 
   const previewListing = useMemo(
     () => previewData && toPreviewListing(previewData.listing, previewData.typologies, previewData.images),
@@ -137,6 +204,20 @@ export default function AdminPublications({ waConfig, navigate, initialFilters }
   const propertyTypesPresent = useMemo(() => Array.from(new Set(listings.map(l => l.property_type).filter(Boolean))) as string[], [listings])
   const servicesPresent = useMemo(() => Array.from(new Set(listings.flatMap(l => l.services))).sort(), [listings])
   const filteredListings = useMemo(() => listings.filter(l => matchesFilters(l, filters)), [listings, filters])
+  const [sort, setSort] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>(null)
+  const sortedListings = useMemo(() => {
+    if (!sort) return filteredListings
+    const factor = sort.direction === 'asc' ? 1 : -1
+    return [...filteredListings].sort((a, b) => {
+      const valueA = sortValue(a, sort.key)
+      const valueB = sortValue(b, sort.key)
+      if (typeof valueA === 'number' && typeof valueB === 'number') return (valueA - valueB) * factor
+      return String(valueA).localeCompare(String(valueB), 'es') * factor
+    })
+  }, [filteredListings, sort])
+  const toggleSort = (key: SortKey) => {
+    setSort(current => current?.key === key ? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' } : { key, direction: 'asc' })
+  }
   const activeFilterCount = Object.entries(filters).filter(([key, value]) =>
     key === 'price_from' || key === 'financing' || key === 'mortgage_eligible' ? value !== 'todos' : value !== ''
   ).length
@@ -180,13 +261,54 @@ export default function AdminPublications({ waConfig, navigate, initialFilters }
     }))
   }
 
+  const resetImport = () => {
+    setImportText('')
+    setPendingImport(null)
+    setDuplicateOf(null)
+  }
+
   const startCreate = () => {
     setEditingId(null)
     setDraft(emptyInput())
     setError(null)
     setNotice(null)
     setHasTypologies(false)
+    resetImport()
   }
+
+  const loadImport = () => {
+    setError(null)
+    setNotice(null)
+    setDuplicateOf(null)
+    try {
+      const parsed = parseZonapropExport(importText)
+      const existing = listings.find(l => l.zonaprop_id === parsed.zonapropId)
+      if (existing) {
+        setDuplicateOf(existing)
+        setError(TEXTS.admin.zonapropImport.duplicate(existing.title))
+        return
+      }
+      setDraft(parsed.input)
+      setPendingImport(parsed)
+      setNotice(TEXTS.admin.zonapropImport.loaded(parsed.pictures.length))
+    } catch (reason) {
+      setError(errorMessage(reason, TEXTS.admin.zonapropImport.invalidData))
+    }
+  }
+
+  const discardImport = () => {
+    resetImport()
+    setDraft(emptyInput())
+    setNotice(null)
+    setError(null)
+  }
+
+  // Importación que llega del bookmarklet: se carga una vez, cuando ya están las publicaciones (para detectar duplicados).
+  useEffect(() => {
+    if (loading || !initialImport || autoImportDone.current) return
+    autoImportDone.current = true
+    loadImport()
+  }, [loading])
 
   const startEdit = async (listing: AdminListing) => {
     setEditingId(listing.id)
@@ -214,12 +336,21 @@ export default function AdminPublications({ waConfig, navigate, initialFilters }
     setSaving(true)
     setError(null)
     try {
-      if (editingId) await updateListing(editingId, draft)
-      else {
+      if (editingId) {
+        await updateListing(editingId, draft)
+        setNotice(TEXTS.admin.publications.notices.updated)
+      } else {
         const created = await createListing(draft)
+        setNotice(TEXTS.admin.publications.notices.created)
+        if (pendingImport?.pictures.length) {
+          // Se importan antes de setEditingId para que ListingImagesEditor monte con todas las fotos.
+          const result = await importZonapropImages(created.id, pendingImport.pictures, (done, total) =>
+            setNotice(TEXTS.admin.zonapropImport.importingImages(done, total)))
+          setNotice(TEXTS.admin.zonapropImport.imagesImported(result.imported, result.failed))
+        }
+        resetImport()
         setEditingId(created.id)
       }
-      setNotice(editingId ? TEXTS.admin.publications.notices.updated : TEXTS.admin.publications.notices.created)
       load()
     } catch (reason) {
       setError(errorMessage(reason, TEXTS.admin.publications.errors.save))
@@ -290,6 +421,25 @@ export default function AdminPublications({ waConfig, navigate, initialFilters }
             <button type="button" onClick={() => setFormOpen(false)} style={{ fontFamily: "'Montserrat'", fontSize: '10px', color: 'rgba(245,242,236,0.4)', background: 'none', border: 'none', cursor: 'pointer' }}>{TEXTS.common.hide}</button>
           </div>
         </div>
+        {!editingId && (
+          <div className="lg:col-span-2" style={{ border: '1px solid rgba(184,142,58,0.3)', padding: '16px' }}>
+            <span style={LABEL_STYLE}>{TEXTS.admin.zonapropImport.title}</span>
+            <div className="flex flex-wrap items-center gap-3 mb-3">
+              <a
+                ref={element => element?.setAttribute('href', zonapropBookmarkletHref(window.location.origin + buildPath('admin')))}
+                onClick={event => event.preventDefault()}
+                style={{ fontFamily: "'Montserrat'", fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#0D1B2A', backgroundColor: '#DCC8A3', padding: '8px 12px', cursor: 'grab', textDecoration: 'none' }}
+              >{TEXTS.admin.zonapropImport.bookmarkletLabel}</a>
+              <span style={{ ...HINT_STYLE, marginTop: 0, flex: 1, minWidth: '220px' }}>{TEXTS.admin.zonapropImport.bookmarkletHint}</span>
+            </div>
+            <label><span style={LABEL_STYLE}>{TEXTS.admin.zonapropImport.pasteLabel}</span><textarea rows={3} value={importText} onChange={event => setImportText(event.target.value)} placeholder={TEXTS.admin.zonapropImport.pastePlaceholder} style={{ ...INPUT_STYLE, fontFamily: 'monospace', fontSize: '11px' }} /></label>
+            <div className="flex flex-wrap gap-2 mt-3">
+              <button type="button" onClick={loadImport} disabled={!importText.trim()} style={{ fontFamily: "'Montserrat'", fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#B88E3A', background: 'none', border: '1px solid rgba(184,142,58,0.4)', padding: '8px 10px', cursor: importText.trim() ? 'pointer' : 'not-allowed' }}>{TEXTS.admin.zonapropImport.loadButton}</button>
+              {pendingImport && <button type="button" onClick={discardImport} style={{ fontFamily: "'Montserrat'", fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(245,242,236,0.6)', background: 'none', border: '1px solid rgba(245,242,236,0.18)', padding: '8px 10px', cursor: 'pointer' }}>{TEXTS.admin.zonapropImport.discardButton}</button>}
+              {duplicateOf && <button type="button" onClick={() => void startEdit(duplicateOf)} style={{ fontFamily: "'Montserrat'", fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#DCC8A3', background: 'none', border: '1px solid rgba(220,200,163,0.35)', padding: '8px 10px', cursor: 'pointer' }}>{TEXTS.admin.zonapropImport.openExistingButton}</button>}
+            </div>
+          </div>
+        )}
         <label><span style={LABEL_STYLE}>{TEXTS.admin.publications.fields.title}</span><input required value={draft.title} onChange={event => updateDraft('title', event.target.value)} style={INPUT_STYLE} /><span style={HINT_STYLE}>{TEXTS.admin.publications.fields.titleHint}</span></label>
         <label><span style={LABEL_STYLE}>{TEXTS.admin.publications.fields.type}</span><select value={draft.type} onChange={event => updateDraft('type', event.target.value as AdminListingInput['type'])} style={INPUT_STYLE}><option value="propiedad" style={OPTION_STYLE}>{TEXTS.listingTypes.property}</option><option value="terreno" style={OPTION_STYLE}>{TEXTS.listingTypes.land}</option><option value="emprendimiento" style={OPTION_STYLE}>{TEXTS.listingTypes.project}</option></select><span style={HINT_STYLE}>{TEXTS.admin.publications.fields.typeHint}</span></label>
         <label className="lg:col-span-2"><span style={LABEL_STYLE}>{TEXTS.admin.publications.fields.description}</span><textarea rows={3} value={draft.description} onChange={event => updateDraft('description', event.target.value)} style={INPUT_STYLE} /><span style={HINT_STYLE}>{TEXTS.admin.publications.fields.descriptionHint}</span></label>
@@ -382,15 +532,45 @@ export default function AdminPublications({ waConfig, navigate, initialFilters }
       <div style={{ fontFamily: "'Montserrat'", fontSize: '11px', color: 'rgba(245,242,236,0.4)', marginBottom: '14px' }}>{TEXTS.admin.publications.resultsCount(filteredListings.length, listings.length)}</div>
 
       {loading ? <p style={{ color: 'rgba(245,242,236,0.5)', fontSize: '12px' }}>{TEXTS.admin.publications.loading}</p> : (
-        <div className="flex flex-col gap-3">
-          {filteredListings.map(listing => (
-            <article key={listing.id} className="flex flex-col lg:flex-row lg:items-center gap-4" style={{ backgroundColor: '#0D1B2A', border: '1px solid rgba(245,242,236,0.08)', padding: '18px 20px' }}>
-              <div className="flex-1"><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', color: '#F5F2EC', marginBottom: '5px' }}>{listing.title}</div><div style={{ fontFamily: "'Montserrat'", fontSize: '10px', color: 'rgba(245,242,236,0.4)' }}>{listing.type} · {listing.neighborhood || listing.city || TEXTS.admin.publications.noLocation} · {listing.publication_status}</div></div>
-              <div className="flex flex-wrap gap-2"><button onClick={() => void openPreview(listing)} disabled={previewLoading} style={{ fontFamily: "'Montserrat'", fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#F5F2EC', background: 'none', border: '1px solid rgba(245,242,236,0.25)', padding: '8px 10px', cursor: previewLoading ? 'wait' : 'pointer' }}>{TEXTS.admin.publications.previewButton}</button><button onClick={() => void startEdit(listing)} style={{ fontFamily: "'Montserrat'", fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#DCC8A3', background: 'none', border: '1px solid rgba(220,200,163,0.35)', padding: '8px 10px', cursor: 'pointer' }}>{TEXTS.common.edit}</button>{listing.publication_status !== 'publicado' && <button onClick={() => void setPublicationStatus(listing, 'publicado')} style={{ fontFamily: "'Montserrat'", fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#B88E3A', background: 'none', border: '1px solid rgba(184,142,58,0.4)', padding: '8px 10px', cursor: 'pointer' }}>{TEXTS.admin.publications.publishButton}</button>}{listing.publication_status === 'publicado' && <button onClick={() => void setPublicationStatus(listing, 'pausado')} style={{ fontFamily: "'Montserrat'", fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(245,242,236,0.6)', background: 'none', border: '1px solid rgba(245,242,236,0.18)', padding: '8px 10px', cursor: 'pointer' }}>{TEXTS.admin.publications.pauseButton}</button>}<button onClick={() => void remove(listing)} style={{ fontFamily: "'Montserrat'", fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#F0B0B0', background: 'none', border: '1px solid rgba(220,100,100,0.35)', padding: '8px 10px', cursor: 'pointer' }}>{TEXTS.common.delete}</button></div>
-            </article>
-          ))}
-          {!filteredListings.length && <p style={{ color: 'rgba(245,242,236,0.5)', fontSize: '12px' }}>{listings.length ? TEXTS.admin.publications.noMatches : TEXTS.admin.publications.emptyCatalog}</p>}
-        </div>
+        !filteredListings.length ? <p style={{ color: 'rgba(245,242,236,0.5)', fontSize: '12px' }}>{listings.length ? TEXTS.admin.publications.noMatches : TEXTS.admin.publications.emptyCatalog}</p> : (
+          <div className="overflow-x-auto" style={{ backgroundColor: '#0D1B2A', border: '1px solid rgba(245,242,236,0.08)' }}>
+            <table className="w-full" style={{ borderCollapse: 'collapse', minWidth: '900px' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid rgba(245,242,236,0.12)' }}>
+                  {TABLE_COLUMNS.map(column => (
+                    <th key={column.key} style={TABLE_HEADER_STYLE} aria-sort={sort?.key === column.key ? (sort.direction === 'asc' ? 'ascending' : 'descending') : undefined}>
+                      <button type="button" onClick={() => toggleSort(column.key)} title={TEXTS.admin.publications.table.sortBy(column.label)} style={{ font: 'inherit', letterSpacing: 'inherit', textTransform: 'inherit', color: sort?.key === column.key ? '#B88E3A' : 'inherit', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+                        {column.label}{sort?.key === column.key ? (sort.direction === 'asc' ? ' ▲' : ' ▼') : ''}
+                      </button>
+                    </th>
+                  ))}
+                  <th style={{ ...TABLE_HEADER_STYLE, textAlign: 'right' }}>{TEXTS.admin.publications.table.actions}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedListings.map(listing => (
+                  <tr key={listing.id} style={{ borderTop: '1px solid rgba(245,242,236,0.06)', backgroundColor: editingId === listing.id ? 'rgba(184,142,58,0.08)' : 'transparent' }}>
+                    <td style={{ ...TABLE_CELL_STYLE, fontFamily: "'Playfair Display', Georgia, serif", fontSize: '14px', color: '#F5F2EC' }}>{listing.title}</td>
+                    <td style={TABLE_CELL_STYLE}>{TYPE_LABELS[listing.type]}</td>
+                    <td style={TABLE_CELL_STYLE}>{listingLocation(listing)}</td>
+                    <td style={{ ...TABLE_CELL_STYLE, whiteSpace: 'nowrap' }}>{listingPrice(listing)}</td>
+                    <td style={TABLE_CELL_STYLE}><span style={{ fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700, color: PUBLICATION_STATUS_COLORS[listing.publication_status] }}>{PUBLICATION_STATUS_LABELS[listing.publication_status]}</span></td>
+                    <td style={TABLE_CELL_STYLE}>{COMMERCIAL_STATUS_LABELS[listing.commercial_status]}</td>
+                    <td style={{ ...TABLE_CELL_STYLE, textAlign: 'right' }}>
+                      <div className="flex justify-end gap-1.5">
+                        <button onClick={() => void openPreview(listing)} disabled={previewLoading} style={{ ...ROW_ACTION_STYLE, color: '#F5F2EC', border: '1px solid rgba(245,242,236,0.25)', cursor: previewLoading ? 'wait' : 'pointer' }}>{TEXTS.admin.publications.previewButton}</button>
+                        <button onClick={() => void startEdit(listing)} style={{ ...ROW_ACTION_STYLE, color: '#DCC8A3', border: '1px solid rgba(220,200,163,0.35)' }}>{TEXTS.common.edit}</button>
+                        {listing.publication_status !== 'publicado' && <button onClick={() => void setPublicationStatus(listing, 'publicado')} style={{ ...ROW_ACTION_STYLE, color: '#B88E3A', border: '1px solid rgba(184,142,58,0.4)' }}>{TEXTS.admin.publications.publishButton}</button>}
+                        {listing.publication_status === 'publicado' && <button onClick={() => void setPublicationStatus(listing, 'pausado')} style={{ ...ROW_ACTION_STYLE, color: 'rgba(245,242,236,0.6)', border: '1px solid rgba(245,242,236,0.18)' }}>{TEXTS.admin.publications.pauseButton}</button>}
+                        <button onClick={() => void remove(listing)} style={{ ...ROW_ACTION_STYLE, color: '#F0B0B0', border: '1px solid rgba(220,100,100,0.35)' }}>{TEXTS.common.delete}</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
       )}
 
       {previewListing && (
