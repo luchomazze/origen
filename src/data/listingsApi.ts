@@ -203,3 +203,9 @@ export function getPublicListings(tipo?: TipoListing): Promise<Listing[]> {
   }
   return promise
 }
+
+/** Descarta el cache del tipo y vuelve a pedirlo a Supabase. */
+export function refreshPublicListings(tipo?: TipoListing): Promise<Listing[]> {
+  resolvedCache.delete(cacheKey(tipo))
+  return getPublicListings(tipo)
+}

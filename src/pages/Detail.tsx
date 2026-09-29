@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { NavProps } from '../types'
 import type { TipoListing, Listing } from '../data/listings'
 import { displayPrecio, displayUnidadPrecio, isPubliclyVisible } from '../data/listings'
-import { getPublicListings } from '../data/listingsApi'
+import { getPublicListings, refreshPublicListings } from '../data/listingsApi'
 import { buildWAMessageUrl, buildWAUrl, resolveMsg } from '../utils/whatsapp'
 import { usePageMeta } from '../hooks/usePageMeta'
 import { buildPath } from '../utils/routing'
@@ -96,6 +96,8 @@ export default function Detail({ slug, tipo, navigate, waConfig, previewListing 
     setError(null)
 
     getPublicListings(tipo)
+      // El cache puede ser anterior a una publicación recién hecha desde el Admin: si no está, volver a pedir.
+      .then(listings => (listings.some(l => l.slug === slug) ? listings : refreshPublicListings(tipo)))
       .then(listings => {
         if (!active) return
         setListing(listings.find(l => l.slug === slug) ?? null)

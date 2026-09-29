@@ -215,6 +215,8 @@ Es esperado: el SQL Editor de Supabase corre sin contexto de sesión de usuario,
 
 **Trade-off importante:** el cache es de sesión de pestaña, sin invalidación. Si el admin publica/edita/pausa algo, una pestaña pública ya abierta con esos datos en cache **no lo va a reflejar hasta que se recargue la página**. No afecta al panel de Admin (usa `adminListingsApi.ts`, sin cache), pero si alguna vez hay que ver cambios en vivo sin recargar (ej. probar publicaciones desde la misma sesión del navegador), hay que agregar invalidación (`resolvedCache.clear()` o similar) — no implementado todavía, no estaba en el alcance pedido.
 
+**Parche 2026-09-28:** "Ver en el sitio" desde el Admin (misma pestaña SPA) mostraba "ya no se encuentra disponible" para publicaciones recién importadas/publicadas, porque el prefetch del arranque no las tenía. `Detail.tsx` ahora, si el slug no está en el cache, llama `refreshPublicListings(tipo)` (borra esa clave y vuelve a pedir). Ediciones de publicaciones que ya estaban en cache siguen sin reflejarse hasta recargar.
+
 ### Gotcha: colisión de slugs con títulos duplicados (2026-09-25)
 
 `slug` se generaba como `slugify(titulo) + '-' + id.slice(0,8)`. Los ids del seed usan el patrón `00000000-0000-4000-8000-00000000000X` — los primeros 8 caracteres son literalmente "00000000" en TODOS los registros del seed, así que dos publicaciones con el mismo título (ej. dos "Casa en Jardines del Jockey") terminaban con el slug idéntico. `Detail.tsx` resuelve por `.find(l => l.slug === slug)`, que devuelve la primera coincidencia del array — así que al entrar a una de las dos, a veces se mostraba la OTRA (sin avisar, sin error). Esto se manifestó como "la tipología no se muestra" cuando en realidad era la publicación equivocada.
