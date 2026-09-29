@@ -9,6 +9,7 @@ import { buildPath } from '../utils/routing'
 import PropertyCard from '../components/PropertyCard'
 import LandCard from '../components/LandCard'
 import ProjectCard from '../components/ProjectCard'
+import { usePreloadNeighbors } from '../components/ListingImageSlider'
 import { TEXTS } from '../content/texts'
 
 interface Props extends NavProps {
@@ -160,6 +161,9 @@ export default function Detail({ slug, tipo, navigate, waConfig, previewListing 
 
   const relatedLabel = tipo === 'PROPIEDAD' ? TEXTS.detail.relatedTitleProperties : tipo === 'TERRENO' ? TEXTS.detail.relatedTitleLands : TEXTS.detail.relatedTitleProjects
 
+  const galleryImages = listing?.imagenes ?? (listing?.imagen ? [listing.imagen] : [])
+  usePreloadNeighbors(galleryImages.map(image => `${image}?w=1400&h=900&fit=crop&auto=format`), activeImg)
+
   if (loading) {
     return <main style={{ paddingTop: '80px', backgroundColor: '#F5F2EC', minHeight: '100vh', padding: '160px 24px', fontFamily: "'Montserrat'", color: '#5C636B', textAlign: 'center' }}>{TEXTS.detail.loading}</main>
   }
@@ -204,7 +208,7 @@ export default function Detail({ slug, tipo, navigate, waConfig, previewListing 
     )
   }
 
-  const images = listing.imagenes ?? (listing.imagen ? [listing.imagen] : [])
+  const images = galleryImages
   const operacionLabel = listing.operacion === 'ALQUILER' ? TEXTS.operations.rent : TEXTS.operations.sale
   const locationLabel = [operacionLabel, listing.barrio, listing.ciudad].filter(Boolean).join(' · ')
   const precio = displayPrecio(listing)

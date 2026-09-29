@@ -284,6 +284,10 @@ Se eligió hash en vez de `postMessage` (no depende de `window.opener`, que se c
 * `listings.zonaprop_id` (migración `20260926000000_add_zonaprop_id.sql`, índice único parcial): detecta reimportaciones y ofrece "Abrir publicación existente".
 * Probado: build SSR de ambos módulos + ejecución del bookmarklet en `vm` contra el `.htm` de referencia → formulario completo y 27 fotos. `vite createServer` en middleware mode se cuelga en este equipo; para tests puntuales usar `vite build --ssr <entry>` y correr el bundle desde dentro del proyecto (si no, no resuelve `node_modules`).
 
+### Imágenes lentas en carruseles (2026-09-28)
+
+Los parámetros `?w=&h=&fit=crop&auto=format` que arma el front solo sirven para Unsplash; las URLs públicas de Supabase Storage los ignoran y sirven el archivo original. Por eso: `uploadListingImage` comprime (`compressImage`: WebP 0.82, máx. 1920 px, solo si pesa > 500 KB y el resultado es menor) y `usePreloadNeighbors` (exportado de `ListingImageSlider.tsx`) precarga la foto anterior/siguiente en la ficha y, en las tarjetas, recién al pasar el mouse o tocar una flecha. Las fotos subidas antes siguen en tamaño original (habría que resubirlas); redimensionar al vuelo requiere Supabase Image Transformations (plan Pro, `/render/image/public/...`).
+
 ### Textos de la UI centralizados en `src/content/texts.ts` (2026-09-25)
 
 Todo texto visible (sitio público y Admin: títulos, botones, labels, hints, placeholders, `alt`/`title`/`aria-label`, mensajes de validación y de error) vive en `TEXTS`, agrupado por pantalla (`TEXTS.home`, `TEXTS.detail`, `TEXTS.admin.publications.fields`, etc.). Claves en inglés descriptivo, valores en español. Los textos con datos variables son funciones (`TEXTS.properties.resultsCount(n)`, `TEXTS.units.bathrooms(n)`), que ya resuelven singular/plural. **Al agregar UI nueva, sumar el texto a `TEXTS` en vez de escribirlo en el JSX.**

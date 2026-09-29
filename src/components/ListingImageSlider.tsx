@@ -1,4 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+
+/** Precarga la imagen anterior y la siguiente para que el cambio con las flechas sea instantáneo. */
+export function usePreloadNeighbors(urls: string[], active: number, enabled = true) {
+  useEffect(() => {
+    if (!enabled || urls.length < 2) return
+    for (const index of [active + 1, active - 1]) {
+      new Image().src = urls[(index + urls.length) % urls.length]
+    }
+  }, [urls, active, enabled])
+}
 
 interface Props {
   images: string[]
@@ -24,16 +34,21 @@ const ARROW_STYLE = {
 
 export default function ListingImageSlider({ images, alt, sizeParams }: Props) {
   const [active, setActive] = useState(0)
+  // En los catálogos solo se precarga al pasar el mouse o tocar, para no bajar fotos de todas las tarjetas.
+  const [warm, setWarm] = useState(false)
+  usePreloadNeighbors(images.map(image => `${image}?${sizeParams}&fit=crop&auto=format`), active, warm)
 
   if (images.length === 0) return null
 
   const prev = (event: React.MouseEvent) => {
     event.stopPropagation()
+    setWarm(true)
     setActive(a => (a - 1 + images.length) % images.length)
   }
 
   const next = (event: React.MouseEvent) => {
     event.stopPropagation()
+    setWarm(true)
     setActive(a => (a + 1) % images.length)
   }
 
@@ -42,6 +57,7 @@ export default function ListingImageSlider({ images, alt, sizeParams }: Props) {
       <img
         src={`${images[active]}?${sizeParams}&fit=crop&auto=format`}
         alt={alt}
+        onPointerEnter={() => setWarm(true)}
         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
       />
       {images.length > 1 && (
